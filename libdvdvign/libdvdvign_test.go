@@ -78,6 +78,3 @@ func TestLibdvdvign(t *testing.T) {
         }
     }
 }
-
-
-
