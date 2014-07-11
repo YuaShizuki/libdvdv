@@ -1,80 +1,52 @@
 package libdvdvign
-import "os"
 import "testing"
+import "os"
+import "../libdvdvutil"
+import "bytes"
 import "io/ioutil"
-import "path/filepath"
-import "strings"
 
-var temp_log func(a ...interface{});
-var libdvdvignore []string;
-var libdvdvignore_result [][]string;
-
-func check_should_ignore(path string) bool {
-    for i,_ := range libdvdvignore_result {
-        for _,str := range libdvdvignore_result[i] {
-            if str == path {
-                return true;
-            }
-        }
-    }
-    return false;
-}
-
-
-func recurse_glob(path string) error {
-    /*get all globs from current directory*/
-    for _,pattern := range libdvdvignore {
-        p := strings.TrimSpace(pattern);
-        if len(p) != 0 {
-            var glob string;
-            if p[0] == '/' {
-                glob = path+p;
-            } else {
-                glob = path+"/"+p;
-            }
-            temp_log("tttt->",glob)
-            temp, err := filepath.Glob(glob);
-            if err != nil {
-                return err;
-            }
-            libdvdvignore_result = append(libdvdvignore_result, temp);
-        }
-    }
-    /* Recurese through all sub directories, but ignore the ones present */
-    /* in libdvdvignore_result already */
-    file_info, err := ioutil.ReadDir(path);
-    if err != nil {
-        return err;
-    }
-    for _,finfo := range file_info {
-        if finfo.IsDir() && !check_should_ignore(path+"/"+finfo.Name()) {
-            err := recurse_glob(path+"/"+finfo.Name());
-            if err != nil {
-                return err;
-            }
-        }
-    }
-    return nil;
-}
-
-func TestLibdvdvign(t *testing.T) {
-    temp_log = t.Log;
-    os.Chdir(os.Getenv("ign_path"));
-    wd,_ := os.Getwd();
-    f, err := ioutil.ReadFile(wd+"/.libdvdvignore");
-    if err != nil {
-        t.Log(err);
+/*
+* Pass the directory where libdvdvign module should be initialized as a 
+* as a enviournment variable ign_dir
+*/
+func TestLibdvdvign(t *testing.T){
+    dir := os.Getenv("ign_dir");
+    if len(dir) == 0 {
+        t.Log("error-> empty value for ign_dir enviornment variable");
         t.Fail();
+        return;
     }
-    libdvdvignore_result = make([][]string, 20);
-    libdvdvignore = strings.Split(string(f), "\n");
-    if recurse_glob(wd) != nil {
-        t.Log("error building glob pattern recursively");
+    if os.Chdir(dir) != nil {
+        t.Log("error-> unable to change directory");
         t.Fail();
+        return;
     }
-    for i,_ := range libdvdvignore_result {
-        for _,str := range libdvdvignore_result[i] {
-            t.Log("file-> ",str);
+    if Init(t.Log) != nil {
+        t.Log("error-> init libdvdvign failed");
+        t.Fail();
+        return;
+    }
+    t.Log("test-> checking if .libdvdvignore file was built")
+    if !libdvdvutil.PathExist(".libdvdvignore") {
+        t.Fail();
+        return;
+    }
+    if libdvdvutil.PathExist(".gitignore") {
+        t.Log("test-> detected .gitignore file, comparing .libdvdvignore with",
+                " .gitignore");
+        gitignore, err1 := ioutil.ReadFile(".gitignore");
+        libdvdvignore, err2 := ioutil.ReadFile(".libdvdvignore");
+        if (err1 != nil)  || (err2 != nil) {
+            t.Log("error-> ",err1,err2);
+            t.Fail();
+            return;
         }
+        if !bytes.Equal(gitignore, libdvdvignore) {
+            t.Log("test-> faild, .gitignore's got diffrent content than ",
+                    ".libdvdvignore");
+            t.Fail();
+            return;
+        }
+        t.Log("test-> .gitignore content matches .libdvdvignore content");
     }
 }
