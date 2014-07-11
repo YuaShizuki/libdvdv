@@ -33,11 +33,11 @@ var ignore [][]string
 * Data structure to represent parsed ignore file, based on the rules mentioned 
 * above 
 */
-type shell_glob_patterns struct {
-    shell_globs []*string;
-    dir_shell_globs []*string
-    main_dir_shell_globs []*string;
-    not_shell_globs [3][]*string
+type ignore_shell_globs {
+    pattern_simple []*string;
+    pattern_main []*string;
+    pattern_dir []*string;
+    pattern_not [3][]*string;
 };
 
 /*Ignore file message*/
@@ -61,11 +61,6 @@ var ignore_file_message string =
 func Init(log func(a ...interface{})) error {
     libdvdvign_log = log;
     libdvdvign_log("initializing libdvdv-ignore in current directory");
-    /*Allocate memmory for patterns */
-    shell_globs = make([]*string, 10);
-    main_dir_shell_globs = make([]*string, 10);
-
-
     /*Detect if there is a .libdvdvignore file in the current dir*/
     if libdvdvutil.PathExist(".libdvdvignore") {
         lines, err := ioutil.ReadFile(".libdvdvignore");
@@ -127,10 +122,7 @@ func parseIgnoreLines(lines string) {
     line_len := len(line);
     for i := 0; i < line_len; i++ {
         line[i] = strings.TrimSpace(line[i]);
-        switch determine_pattern_type(&line[i]) {
-            case p_simple:
-                shell_globs = append()
-        }
+        switch determine_pattern_type()
     }
 }
 
