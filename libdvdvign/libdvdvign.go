@@ -22,12 +22,14 @@ package libdvdvign
 import "../libdvdvutil"
 import "io/ioutil"
 import "errors"
+import "container/lists"
+import "path/filesyste"
 
 /* All modules have a log function*/
 var libdvdvign_log func(a ...interface{});
 
 /*Ignore file list*/
-var ignore [][]string
+var ignore *container.List;
 
 /* 
 * Data structure to represent parsed ignore file, based on the rules mentioned 
@@ -60,6 +62,7 @@ var ignore_file_message string =
 
 func Init(log func(a ...interface{})) error {
     libdvdvign_log = log;
+    ignore = list.New();
     libdvdvign_log("initializing libdvdv-ignore in current directory");
     /*Detect if there is a .libdvdvignore file in the current dir*/
     if libdvdvutil.PathExist(".libdvdvignore") {
@@ -154,9 +157,26 @@ func parseIgnoreLines(lines string) *ignore_shell_globs {
     }
 }
 
-func buildIgnoreList() error {
-    
+func buildIgnoreList(globs *ignore_shell_globs) error {
+    if globs == nil {
+        return errors.New("unknown error, shell globs empty");
+    }
+    wd,err := os.Getwd();
+    if err != nil {
+        return err;
+    }
+    for i := range globs.sg_main {
+        match, err := filepath.Glob(wd+(*(globs.sg_main[i])));
+        if err != nil {
+            return err;
+        }
+        ignore.PushBack(match);
+    }
+    return buildIgnoreListDirWalk(wd, globs);
 }
 
-func check(path string) error {
+
+
+func Check(path string) error {
+
 }
