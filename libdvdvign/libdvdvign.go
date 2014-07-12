@@ -19,9 +19,9 @@ package libdvdvign
 * understanding shell glob patterns.
 */
 
-//import "os"
 import "../libdvdvutil"
 import "io/ioutil"
+import "errors"
 
 /* All modules have a log function*/
 var libdvdvign_log func(a ...interface{});
@@ -68,7 +68,7 @@ func Init(log func(a ...interface{})) error {
             libdvdvign_log("error-> unable to read .libdvdvignore file");
             return err;
         }
-        parseIgnoreLines(string(lines));
+        return buildIgnoreList(parseIgnoreLines(string(lines)));
     } else {
         var lines []byte = nil;
         if libdvdvutil.PathExist(".gitignore") {
@@ -86,9 +86,9 @@ func Init(log func(a ...interface{})) error {
             libdvdvign_log(err);
             return err;
         }
-        parseIgnoreLines(string(lines));
+        return buildIgnoreList(parseIgnoreLines(string(lines)));
     }
-    return nil;
+    return errors.New("error-> Unknown error");
 }
 
 /*
@@ -125,7 +125,8 @@ func parseIgnoreLines(lines string) *ignore_shell_globs {
     p.sg_simple = make([]*string, 0, 10);
     p.sg_dir = make([]*string, 0, 10);
     p.sg_main = make([]*string, 0, 10);
-    p.sg_not = [3][]*string { make([]*string,0, 5), make([]*string,0,5), make([]*string,0,5)};
+    p.sg_not = [3][]*string {   make([]*string,0, 5), make([]*string,0,5), 
+                                make([]*string,0,5)};
 
     for i := 0; i < line_len; i++ {
         line[i] = strings.TrimSpace(line[i]);
@@ -153,3 +154,9 @@ func parseIgnoreLines(lines string) *ignore_shell_globs {
     }
 }
 
+func buildIgnoreList() error {
+    
+}
+
+func check(path string) error {
+}
