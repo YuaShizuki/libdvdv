@@ -27,8 +27,7 @@ import "path/filesystem"
 import "io/ioutil"
 
 /* All modules have a log function*/
-var libdvdvign_log func(a ...interface{});
-
+var libdvdvign_log func(a ...interface{}) = func(a ...interface{}) { };
 /*Ignore file list*/
 var ignore *container.List;
 
@@ -36,12 +35,24 @@ var ignore *container.List;
 * Data structure to represent parsed ignore file, based on the rules mentioned 
 * above 
 */
-type ignore_shell_globs {
-    sg_simple []*string;
-    sg_dir []*string;
-    sg_main []*string;
-    sg_not [3][]*string;
+type Ignore_shell_globs {
+    Sg_simple []*string;
+    Sg_dir []*string;
+    Sg_main []*string;
+    Sg_not [3][]*string;
 };
+
+/*
+* The below constants help parses every single line according to the rules mentioned
+* above.
+*/
+const (
+    p_simple = iota;
+    p_dir = iota;
+    p_main = iota;
+    p_neg = iota;
+    p_reject = iota;
+);
 
 /*Ignore file message*/
 var ignore_file_message string =
@@ -61,19 +72,18 @@ var ignore_file_message string =
 *.o
 `
 
-func Init(log func(a ...interface{})) error {
-    libdvdvign_log = log;
-    ignore = list.New();
-    libdvdvign_log("initializing libdvdv-ignore in current directory");
-    /*Detect if there is a .libdvdvignore file in the current dir*/
-    if libdvdvutil.PathExist(".libdvdvignore") {
-        lines, err := ioutil.ReadFile(".libdvdvignore");
-        if err != nil {
-            libdvdvign_log("error-> unable to read .libdvdvignore file");
-            return err;
-        }
-        return buildIgnoreList(parseIgnoreLines(string(lines)));
+func Setup(log func(a ...interface{})) error {
+    libddvdvign_log = log;
+    if ignore != nil {
+        ignore.Init();
     } else {
+        ignore := list.New();
+    }
+    return nil;
+}
+
+func BuildIgnoreFile() error {
+    if !libdvdvutil.PathExist(".libdvdvignore") {
         var lines []byte = nil;
         if libdvdvutil.PathExist(".gitignore") {
             var err error;
@@ -90,22 +100,9 @@ func Init(log func(a ...interface{})) error {
             libdvdvign_log(err);
             return err;
         }
-        return buildIgnoreList(parseIgnoreLines(string(lines)));
     }
-    return errors.New("error-> Unknown error");
+    return nil;
 }
-
-/*
-* The below constants help parses every single line according to the rules mentioned
-* above.
-*/
-const (
-    p_simple = iota;
-    p_dir = iota;
-    p_main = iota;
-    p_neg = iota;
-    p_reject = iota;
-);
 
 func determine_pattern_type (s *string) int {
     s_len := len(*s);
@@ -113,7 +110,7 @@ func determine_pattern_type (s *string) int {
         return p_reject;
     } else if (*s)[0] == '!' {
         return p_neg;
-    } else if (*s)[0] != '/' && (*s)[s_len - 1] == '/' {
+    } else if ((*s)[0] != '/') && ((*s)[s_len - 1] == '/') {
         return p_dir;
     } else if (*s)[0] == '/' {
         return p_main;
@@ -121,34 +118,38 @@ func determine_pattern_type (s *string) int {
     return p_simple;
 }
 
-func parseIgnoreLines(lines string) *ignore_shell_globs {
+func ParseIgnoreFile() *Ignore_shell_globs {
+    lines, err := ioutil.ReadFile(".libdvdvignore");
+    if err != nil {
+        return nil;
+    }
     line := strings.Split(lines, "\n");
     line_len := len(line);
 
     p := new(ignore_shell_globs);
-    p.sg_simple = make([]*string, 0, 10);
-    p.sg_dir = make([]*string, 0, 10);
-    p.sg_main = make([]*string, 0, 10);
-    p.sg_not = [3][]*string {   make([]*string,0, 5), make([]*string,0,5),
-                                make([]*string,0,5)};
+    p.Sg_simple = make([]*string, 0, 25);
+    p.Sg_dir = make([]*string, 0, 25);
+    p.Sg_main = make([]*string, 0, 25);
+    p.Sg_not = [3][]*string {   make([]*string,0, 15), make([]*string,0,15),
+                                make([]*string,0,15)};
 
     for i := 0; i < line_len; i++ {
         line[i] = strings.TrimSpace(line[i]);
         switch determine_pattern_type(&(line[i])) {
             case p_simple:
-                p.pattern_simple = append(p.sg_simple,&(line[i]));
+                p.Sg_simple = append(p.Sg_simple,&(line[i]));
             case p_dir:
-                p.pattern_dir = append(p.sg_dir, &(line[i]));
+                p.Sg_dir = append(p.Sg_dir, &(line[i]));
             case p_main:
-                p.pattern_main = append(p.sg_main, &(line[i]));
+                p.Sg_main = append(p.Sg_main, &(line[i]));
             case p_neg:
                 switch determine_pattern_type(&(line[1:len(line[i])])) {
                     case p_simple:
-                        p.sg_not[0] = append(p.sg_not[0],&(line[1:len(line[i])]));
+                        p.Sg_not[0] = append(p.Sg_not[0],&(line[1:len(line[i])]));
                     case p_dir:
-                        p.sg_not[1] = append(p.sg_not[1],&(line[1:len(line[i])]));
+                        p.Sg_not[1] = append(p.Sg_not[1],&(line[1:len(line[i])]));
                     case p_main:
-                        p.sg_not[2] = append(p.sg_not[2], &(line[1:len(line[i])]));
+                        p.Sg_not[2] = append(p.Sg_not[2], &(line[1:len(line[i])]));
                     case default:
                         continue;
                 }
@@ -158,7 +159,7 @@ func parseIgnoreLines(lines string) *ignore_shell_globs {
     }
 }
 
-func buildIgnoreList(globs *ignore_shell_globs) error {
+func BuildIgnoreList(globs *Ignore_shell_globs) error {
     if globs == nil {
         return errors.New("unknown error, shell globs empty");
     }
@@ -166,8 +167,8 @@ func buildIgnoreList(globs *ignore_shell_globs) error {
     if err != nil {
         return err;
     }
-    for i := range globs.sg_main {
-        match, err := filepath.Glob(wd+(*(globs.sg_main[i])));
+    for i := range globs.Sg_main {
+        match, err := filepath.Glob(wd+(*(globs.Sg_main[i])));
         if err != nil {
             return err;
         }
@@ -179,8 +180,8 @@ func buildIgnoreList(globs *ignore_shell_globs) error {
 }
 
 func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
-    for i := range globs.sg_simple {
-        match, err := filepath.Glob(wd+"/"+(*(globs.sg_simple[i])));
+    for i := range globs.Sg_simple {
+        match, err := filepath.Glob(wd+"/"+(*(globs.Sg_simple[i])));
         if err != nil {
             return err;
         }
@@ -189,9 +190,41 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
         }
         ignore.PushBack(match);
     }
-    for 
+    for i := range golbs.Sg_dir {
+        match, err := filepath.Glob(wd+"/"+(*(globs.Sg_dir[i])));
+        if err != nil {
+            return err;
+        }
+        if len(match) == 0 {
+            continue;
+        }
+        for i := range match {
+            match[i] = match[i][0:(len(match[i])-1)];
+        }
+        ignore.PushBack(match);
+    }
+    finfo, err := ioutil.ReadDir(path);
+    if err != nil  {
+        return err;
+    }
+    for i := range finfo {
+        if finfo[i].IsDir() && !Check(wd+"/"+finfo[i].Name()) {
+            err := buildIgnoreListDirWalk(wd+"/"+finfo[i].Name());
+            if err != nil {
+                return err;
+            }
+        }
+    }
 }
 
 func Check(path string) error {
-
+    for e := ignore.Front(); e != nil; e = e.Next() {
+        ls,_ := e.Value.([]string);
+        for i := range ls {
+            if path == ls[i] {
+                return true;
+            }
+        }
+    }
+    return false;
 }
