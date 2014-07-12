@@ -125,7 +125,7 @@ func parseIgnoreLines(lines string) *ignore_shell_globs {
     p.sg_simple = make([]*string, 0, 10);
     p.sg_dir = make([]*string, 0, 10);
     p.sg_main = make([]*string, 0, 10);
-    p.sg_not = [3][]*string {   make([]*string,0, 5), make([]*string,0,5), 
+    p.sg_not = [3][]*string {   make([]*string,0, 5), make([]*string,0,5),
                                 make([]*string,0,5)};
 
     for i := 0; i < line_len; i++ {
