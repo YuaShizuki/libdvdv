@@ -23,7 +23,8 @@ import "../libdvdvutil"
 import "io/ioutil"
 import "errors"
 import "container/lists"
-import "path/filesyste"
+import "path/filesystem"
+import "io/ioutil"
 
 /* All modules have a log function*/
 var libdvdvign_log func(a ...interface{});
@@ -161,7 +162,7 @@ func buildIgnoreList(globs *ignore_shell_globs) error {
     if globs == nil {
         return errors.New("unknown error, shell globs empty");
     }
-    wd,err := os.Getwd();
+    wd, err := os.Getwd();
     if err != nil {
         return err;
     }
@@ -170,12 +171,26 @@ func buildIgnoreList(globs *ignore_shell_globs) error {
         if err != nil {
             return err;
         }
-        ignore.PushBack(match);
+        if len(match) != 0 {
+            ignore.PushBack(match);
+        }
     }
     return buildIgnoreListDirWalk(wd, globs);
 }
 
-
+func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
+    for i := range globs.sg_simple {
+        match, err := filepath.Glob(wd+"/"+(*(globs.sg_simple[i])));
+        if err != nil {
+            return err;
+        }
+        if len(match) == 0 {
+            continue;
+        }
+        ignore.PushBack(match);
+    }
+    for 
+}
 
 func Check(path string) error {
 
