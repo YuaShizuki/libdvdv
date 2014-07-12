@@ -34,10 +34,10 @@ var ignore [][]string
 * above 
 */
 type ignore_shell_globs {
-    pattern_simple []*string;
-    pattern_main []*string;
-    pattern_dir []*string;
-    pattern_not [3][]*string;
+    sg_simple []*string;
+    sg_dir []*string;
+    sg_main []*string;
+    sg_not [3][]*string;
 };
 
 /*Ignore file message*/
@@ -114,15 +114,42 @@ func determine_pattern_type (s *string) int {
     } else if (*s)[0] == '/' {
         return p_main;
     }
-    return p_reject;
+    return p_simple;
 }
 
-func parseIgnoreLines(lines string) {
+func parseIgnoreLines(lines string) *ignore_shell_globs {
     line := strings.Split(lines, "\n");
     line_len := len(line);
+
+    p := new(ignore_shell_globs);
+    p.sg_simple = make([]*string, 0, 10);
+    p.sg_dir = make([]*string, 0, 10);
+    p.sg_main = make([]*string, 0, 10);
+    p.sg_not = [3][]*string { make([]*string,0, 5), make([]*string,0,5), make([]*string,0,5)};
+
     for i := 0; i < line_len; i++ {
         line[i] = strings.TrimSpace(line[i]);
-        switch determine_pattern_type()
+        switch determine_pattern_type(&(line[i])) {
+            case p_simple:
+                p.pattern_simple = append(p.sg_simple,&(line[i]));
+            case p_dir:
+                p.pattern_dir = append(p.sg_dir, &(line[i]));
+            case p_main:
+                p.pattern_main = append(p.sg_main, &(line[i]));
+            case p_neg:
+                switch determine_pattern_type(&(line[1:len(line[i])])) {
+                    case p_simple:
+                        p.sg_not[0] = append(p.sg_not[0],&(line[1:len(line[i])]));
+                    case p_dir:
+                        p.sg_not[1] = append(p.sg_not[1],&(line[1:len(line[i])]));
+                    case p_main:
+                        p.sg_not[2] = append(p.sg_not[2], &(line[1:len(line[i])]));
+                    case default:
+                        continue;
+                }
+            case default:
+                continue;
+        }
     }
 }
 
