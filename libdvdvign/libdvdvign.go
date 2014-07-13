@@ -73,7 +73,7 @@ var ignore_file_message string =
 `
 
 /* 
-* All modules should have a setup function  
+* Standard setup function.  
 */
 func Setup(log func(a ...interface{})) error {
     libddvdvign_log = log;
@@ -215,7 +215,7 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
     }
     for i := range finfo {
         path2 := wd + "/" + finfo[i].Name();
-        if finfo[i].IsDir() && (Check(path2) != nil) {
+        if finfo[i].IsDir() && (Check(path2) == nil) {
             err := buildIgnoreListDirWalk(path2, globs);
             if err != nil {
                 return err;
@@ -236,8 +236,47 @@ func negateFromIgnoreList(path string, globs *Ignore_shell_globs) error {
                 match[i] = m[0:len(m)-1];
             }
         }
-        appendTpIgnore(match);
+        removeFromIgnore(match);
     }
+    err := negateFromIgnoreListDirWalk(path, globs);
+    if err != nil {
+        return err;
+    }
+    return nil;
+}
+
+func negateFromIgnoreListDirWalk(path string, globs *Ignore_shell_globs) error {
+    for _,s  := range globs.Sg_not[0] {
+        match, err := filepath.Glob(path+"/"+s);
+        if err != nil {
+            return err;
+        }
+        removeFromIgnore(match);
+    }
+    for _,s := range globs.Sg_not[1] {
+        match, err := filepath.Glob(path);
+        if err != nil {
+            return err;
+        }
+        for i, m := range match {
+            match[i] = m[0:(len(m)-1)]
+        }
+        removeFromIgnore(match);
+    }
+    finfo, err := ioutil.ReadDir(path);
+    if err != nil {
+        return err;
+    }
+    for _,info := range finfo {
+        path2 := path + "/" + info.Name();
+        if info.IsDir() && (Check(path2) == nil) {
+            err := negateFromIgnoreListDirWalk(path2, globs);
+            if err != nil {
+                return err;
+            }
+        }
+    }
+    return nil;
 }
 
 func appendToIgnore(str []string) {
