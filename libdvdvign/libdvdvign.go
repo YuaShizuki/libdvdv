@@ -79,8 +79,6 @@ func Setup(log func(a ...interface{})) error {
     libddvdvign_log = log;
     if ignore != nil {
         ignore.Init();
-    } else {
-        ignore := list.New();
     }
     return nil;
 }
@@ -175,9 +173,15 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
         if err != nil {
             return err;
         }
-        if len(match) != 0 {
-            ignore.PushBack(match);
+        if len(match) == 0 {
+            continue;
         }
+        for i := range match {
+            if match[i][len(match[i])-1] == '/' {
+                match[i] = match[i][0:(len(match[i])-1)];
+            }
+        }
+        appendToIgnore(match);
     }
     err := buildIgnoreListDirWalk(wd, globs);
     if err == nil {
@@ -197,7 +201,7 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
         if len(match) == 0 {
             continue;
         }
-        ignore.PushBack(match);
+        appendToIgnore(match);
     }
     for _,p := range golbs.Sg_dir {
         match, err := filepath.Glob(wd+"/"+(*p));
@@ -210,7 +214,7 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
         for i := range match {
             match[i] = match[i][0:(len(match[i])-1)];
         }
-        ignore.PushBack(match);
+        appendToIgnore(match);
     }
     finfo, err := ioutil.ReadDir(path);
     if err != nil  {
@@ -224,6 +228,7 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
             }
         }
     }
+    return nil;
 }
 
 func Check(path string) *Element {
@@ -238,12 +243,34 @@ func Check(path string) *Element {
     return nil;
 }
 
-func negateFromIgnoreList(path string, globs *Ignore_shell_globs) {
+func negateFromIgnoreList(path string, globs *Ignore_shell_globs) error {
     for _, p := globs.Sg_not[2] {
-         
+        match, err := filepath.Glob(path+(*p));
+        if err != nil {
+            return err;
+        }
+        if len(match) == 0 {
+            continue;
+        }
+        for i := range match {
+            if libdvdvutil.LastByte(&(match[i])) == '/' {
+                match[i] := match[i][0:(len(match[i])-1)];
+            }
+        }
+        removeFromIgnore(match);
     }
 }
 
+func appendToIgnore(str []string) {
+    if ignore == nil {
+        ignore = list.New();
+    }
+    for i := range str {
+        ignore.PushBack(&str[i]);
+    }
+}
 
+func removeFromIgnore(str []string) {
+}
 
 

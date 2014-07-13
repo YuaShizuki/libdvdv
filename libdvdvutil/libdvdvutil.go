@@ -3,7 +3,6 @@ package libdvdvutil
 * This package contains utility function used by all modules 
 */
 import "os"
-
 /*
 * Checks if a file path exists
 */
@@ -18,4 +17,10 @@ func PathExist(path string) bool {
     return true;
 }
 
+/*
+* Returns the last character of a string;
+*/
+func LastByte(s *string) byte{
+    return (*s)[len(*s) - 1];
+}
 
