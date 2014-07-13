@@ -4,8 +4,8 @@ package libdvdvign
 * This module builds a ignore file list during initialization. Ounce initialized, one
 * can call check to check if a file is suppose to be ignored or not. This package
 * reads the .libdvdvignore file present in the project's main directory. If it cant
-* find a .libdvdvignore file, it creates a new one and adds shell globs patterns from 
-* a .gitignore file if present.
+* find a .libdvdvignore file, it creates a new one and adds shell globs patterns 
+* from a .gitignore file if present.
 * 
 * Rules for ignoring.
 *   -> lines starting with '#' are treated as comments
@@ -72,6 +72,9 @@ var ignore_file_message string =
 *.o
 `
 
+/* 
+* All modules should have a setup function  
+*/
 func Setup(log func(a ...interface{})) error {
     libddvdvign_log = log;
     if ignore != nil {
@@ -104,7 +107,7 @@ func BuildIgnoreFile() error {
     return nil;
 }
 
-func determine_pattern_type (s *string) int {
+func determine_pattern_type(s *string) int {
     s_len := len(*s);
     if (*s)[0] == '#' {
         return p_reject;
@@ -167,8 +170,8 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
     if err != nil {
         return err;
     }
-    for i := range globs.Sg_main {
-        match, err := filepath.Glob(wd+(*(globs.Sg_main[i])));
+    for _,p := range globs.Sg_main {
+        match, err := filepath.Glob(wd+(*p));
         if err != nil {
             return err;
         }
@@ -176,12 +179,18 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
             ignore.PushBack(match);
         }
     }
-    return buildIgnoreListDirWalk(wd, globs);
+    err := buildIgnoreListDirWalk(wd, globs);
+    if err == nil {
+        negateFromIgnoreList(wd, globs);
+    } else {
+        ignore.Init();
+    }
+    return err;
 }
 
 func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
-    for i := range globs.Sg_simple {
-        match, err := filepath.Glob(wd+"/"+(*(globs.Sg_simple[i])));
+    for _,p := range globs.Sg_simple {
+        match, err := filepath.Glob(wd+"/"+(*p));
         if err != nil {
             return err;
         }
@@ -190,8 +199,8 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
         }
         ignore.PushBack(match);
     }
-    for i := range golbs.Sg_dir {
-        match, err := filepath.Glob(wd+"/"+(*(globs.Sg_dir[i])));
+    for _,p := range golbs.Sg_dir {
+        match, err := filepath.Glob(wd+"/"+(*p));
         if err != nil {
             return err;
         }
@@ -208,7 +217,7 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
         return err;
     }
     for i := range finfo {
-        if finfo[i].IsDir() && !Check(wd+"/"+finfo[i].Name()) {
+        if finfo[i].IsDir() && (Check(wd+"/"+finfo[i].Name()) != nil) {
             err := buildIgnoreListDirWalk(wd+"/"+finfo[i].Name());
             if err != nil {
                 return err;
@@ -217,14 +226,24 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
     }
 }
 
-func Check(path string) error {
+func Check(path string) *Element {
     for e := ignore.Front(); e != nil; e = e.Next() {
         ls,_ := e.Value.([]string);
         for i := range ls {
             if path == ls[i] {
-                return true;
+                return e;
             }
         }
     }
-    return false;
+    return nil;
 }
+
+func negateFromIgnoreList(path string, globs *Ignore_shell_globs) {
+    for _, p := globs.Sg_not[2] {
+         
+    }
+}
+
+
+
+
