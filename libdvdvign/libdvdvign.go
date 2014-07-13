@@ -36,10 +36,10 @@ var ignore *container.List;
 * above 
 */
 type Ignore_shell_globs {
-    Sg_simple []*string;
-    Sg_dir []*string;
-    Sg_main []*string;
-    Sg_not [3][]*string;
+    Sg_simple []string;
+    Sg_dir []string;
+    Sg_main []string;
+    Sg_not [3][]string;
 };
 
 /*
@@ -125,7 +125,6 @@ func ParseIgnoreFile() *Ignore_shell_globs {
         return nil;
     }
     line := strings.Split(lines, "\n");
-    line_len := len(line);
 
     p := new(ignore_shell_globs);
     p.Sg_simple = make([]string, 0, 25);
@@ -134,23 +133,26 @@ func ParseIgnoreFile() *Ignore_shell_globs {
     p.Sg_not = [3][]string {    make([]string,0, 15), make([]string,0,15),
                                 make([]string,0,15)};
 
-    for i := 0; i < line_len; i++ {
-        line[i] = strings.TrimSpace(line[i]);
-        switch determine_pattern_type(&(line[i])) {
+    for _,glob := range line {
+        glob = strings.TrimSpace(glob);
+        if len(glob) == 0 {
+            continue;
+        }
+        switch determine_pattern_type(glob) {
             case p_simple:
-                p.Sg_simple = append(p.Sg_simple,&(line[i]));
+                p.Sg_simple = append(p.Sg_simple, glob);
             case p_dir:
-                p.Sg_dir = append(p.Sg_dir, &(line[i]));
+                p.Sg_dir = append(p.Sg_dir, glob);
             case p_main:
-                p.Sg_main = append(p.Sg_main, &(line[i]));
+                p.Sg_main = append(p.Sg_main, glob);
             case p_neg:
-                switch determine_pattern_type(&(line[1:len(line[i])])) {
+                switch determine_pattern_type(glob[1:len(glob)]) {
                     case p_simple:
-                        p.Sg_not[0] = append(p.Sg_not[0],&(line[1:len(line[i])]));
+                        p.Sg_not[0] = append(p.Sg_not[0],glob[1:len(glob)]);
                     case p_dir:
-                        p.Sg_not[1] = append(p.Sg_not[1],&(line[1:len(line[i])]));
+                        p.Sg_not[1] = append(p.Sg_not[1],glob[1:len(glob)]);
                     case p_main:
-                        p.Sg_not[2] = append(p.Sg_not[2], &(line[1:len(line[i])]));
+                        p.Sg_not[2] = append(p.Sg_not[2],glob[1:len(glob)]);
                     case default:
                         continue;
                 }
@@ -168,24 +170,21 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
     if err != nil {
         return err;
     }
-    for _,p := range globs.Sg_main {
-        match, err := filepath.Glob(wd+(*p));
+    for _,s := range globs.Sg_main {
+        match, err := filepath.Glob(wd+s);
         if err != nil {
             return err;
         }
-        if len(match) == 0 {
-            continue;
-        }
-        for i := range match {
-            if match[i][len(match[i])-1] == '/' {
-                match[i] = match[i][0:(len(match[i])-1)];
+        for i, m := range match {
+            if m[len(m)-1]  == '/' {
+                match[i] = m[0:len(m)-1];
             }
         }
         appendToIgnore(match);
     }
     err := buildIgnoreListDirWalk(wd, globs);
     if err == nil {
-        negateFromIgnoreList(wd, globs);
+        err = negateFromIgnoreList(wd, globs);
     } else {
         ignore.Init();
     }
@@ -193,26 +192,20 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
 }
 
 func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
-    for _,p := range globs.Sg_simple {
-        match, err := filepath.Glob(wd+"/"+(*p));
+    for _,s := range globs.Sg_simple {
+        match, err := filepath.Glob(wd+"/"+s);
         if err != nil {
             return err;
-        }
-        if len(match) == 0 {
-            continue;
         }
         appendToIgnore(match);
     }
-    for _,p := range golbs.Sg_dir {
-        match, err := filepath.Glob(wd+"/"+(*p));
+    for _,s := range golbs.Sg_dir {
+        match, err := filepath.Glob(wd+"/"+s);
         if err != nil {
             return err;
         }
-        if len(match) == 0 {
-            continue;
-        }
-        for i := range match {
-            match[i] = match[i][0:(len(match[i])-1)];
+        for i, m := range match {
+            match[i] = m[len(m)-1];
         }
         appendToIgnore(match);
     }
@@ -221,8 +214,9 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
         return err;
     }
     for i := range finfo {
-        if finfo[i].IsDir() && (Check(wd+"/"+finfo[i].Name()) != nil) {
-            err := buildIgnoreListDirWalk(wd+"/"+finfo[i].Name());
+        path2 := wd + "/" + finfo[i].Name();
+        if finfo[i].IsDir() && (Check(path2) != nil) {
+            err := buildIgnoreListDirWalk(path2, globs);
             if err != nil {
                 return err;
             }
@@ -233,19 +227,16 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
 
 func negateFromIgnoreList(path string, globs *Ignore_shell_globs) error {
     for _, p := globs.Sg_not[2] {
-        match, err := filepath.Glob(path+(*p));
+        match, err := filepath.Glob(path+p);
         if err != nil {
             return err;
         }
-        if len(match) == 0 {
-            continue;
-        }
-        for i := range match {
-            if libdvdvutil.LastByte(&(match[i])) == '/' {
-                match[i] := match[i][0:(len(match[i])-1)];
+        for i, m := range match {
+            if m[len(m)-1] == '/' {
+                match[i] = m[0:len(m)-1];
             }
         }
-        removeFromIgnore(match);
+        appendTpIgnore(match);
     }
 }
 
@@ -254,16 +245,26 @@ func appendToIgnore(str []string) {
         ignore = list.New();
     }
     for i := range str {
-        ignore.PushBack(&str[i]);
+        ignore.PushBack(str[i]);
     }
 }
 
 func removeFromIgnore(str []string) {
+    for e := ignore.Front(); e != nil; {
+        next := e.Next();
+        for _,s := range str {
+            if s == e.Value.(string) {
+                ignore.Remove(e);
+                break;
+            }
+        }
+        e = next;
+    }
 }
 
-func Check(s *string) *Element {
+func Check(s string) *Element {
     for e := ignore.Front(); e != nil ; e = e.Next() {
-        if *(e.Value.(*String)) == s {
+        if e.Value.(string) == s {
             return e;
         }
     }

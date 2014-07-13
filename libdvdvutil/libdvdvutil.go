@@ -17,10 +17,3 @@ func PathExist(path string) bool {
     return true;
 }
 
-/*
-* Returns the last character of a string;
-*/
-func LastByte(s *string) byte{
-    return (*s)[len(*s) - 1];
-}
-
