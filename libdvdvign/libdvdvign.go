@@ -105,15 +105,15 @@ func BuildIgnoreFile() error {
     return nil;
 }
 
-func determine_pattern_type(s *string) int {
-    s_len := len(*s);
-    if (*s)[0] == '#' {
+func determine_pattern_type(s string) int {
+    s_len := len(s);
+    if (s)[0] == '#' {
         return p_reject;
-    } else if (*s)[0] == '!' {
+    } else if s[0] == '!' {
         return p_neg;
-    } else if ((*s)[0] != '/') && ((*s)[s_len - 1] == '/') {
+    } else if (s[0] != '/') && (s[s_len - 1] == '/') {
         return p_dir;
-    } else if (*s)[0] == '/' {
+    } else if s[0] == '/' {
         return p_main;
     }
     return p_simple;
@@ -128,11 +128,11 @@ func ParseIgnoreFile() *Ignore_shell_globs {
     line_len := len(line);
 
     p := new(ignore_shell_globs);
-    p.Sg_simple = make([]*string, 0, 25);
-    p.Sg_dir = make([]*string, 0, 25);
-    p.Sg_main = make([]*string, 0, 25);
-    p.Sg_not = [3][]*string {   make([]*string,0, 15), make([]*string,0,15),
-                                make([]*string,0,15)};
+    p.Sg_simple = make([]string, 0, 25);
+    p.Sg_dir = make([]string, 0, 25);
+    p.Sg_main = make([]string, 0, 25);
+    p.Sg_not = [3][]string {    make([]string,0, 15), make([]string,0,15),
+                                make([]string,0,15)};
 
     for i := 0; i < line_len; i++ {
         line[i] = strings.TrimSpace(line[i]);
@@ -231,18 +231,6 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
     return nil;
 }
 
-func Check(path string) *Element {
-    for e := ignore.Front(); e != nil; e = e.Next() {
-        ls,_ := e.Value.([]string);
-        for i := range ls {
-            if path == ls[i] {
-                return e;
-            }
-        }
-    }
-    return nil;
-}
-
 func negateFromIgnoreList(path string, globs *Ignore_shell_globs) error {
     for _, p := globs.Sg_not[2] {
         match, err := filepath.Glob(path+(*p));
@@ -271,6 +259,15 @@ func appendToIgnore(str []string) {
 }
 
 func removeFromIgnore(str []string) {
+}
+
+func Check(s *string) *Element {
+    for e := ignore.Front(); e != nil ; e = e.Next() {
+        if *(e.Value.(*String)) == s {
+            return e;
+        }
+    }
+    return nil;
 }
 
 
