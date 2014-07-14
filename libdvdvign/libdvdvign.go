@@ -20,22 +20,23 @@ package libdvdvign
 */
 
 import "../libdvdvutil"
+import "strings"
+import "os"
 import "io/ioutil"
+import "container/list"
+import "path/filepath"
 import "errors"
-import "container/lists"
-import "path/filesystem"
-import "io/ioutil"
 
-/* All modules have a log function*/
 var libdvdvign_log func(a ...interface{}) = func(a ...interface{}) { };
+
 /*Ignore file list*/
-var ignore *container.List;
+var ignore *list.List;
 
 /* 
 * Data structure to represent parsed ignore file, based on the rules mentioned 
 * above 
 */
-type Ignore_shell_globs {
+type Ignore_shell_globs struct {
     Sg_simple []string;
     Sg_dir []string;
     Sg_main []string;
@@ -54,8 +55,7 @@ const (
     p_reject = iota;
 );
 
-/*Ignore file message*/
-var ignore_file_message string =
+var standard_ignore_header string =
 `# files specified hear are intentionally untracked files that libdevdev would 
 # ignore. 
 # Rules for ignoring.
@@ -76,13 +76,18 @@ var ignore_file_message string =
 * Standard setup function.  
 */
 func Setup(log func(a ...interface{})) error {
-    libddvdvign_log = log;
+    if log != nil {
+        libdvdvign_log = log;
+    }
     if ignore != nil {
         ignore.Init();
     }
     return nil;
 }
 
+/*
+* Builds ".libdvdvignore" file in current directory.
+*/
 func BuildIgnoreFile() error {
     if !libdvdvutil.PathExist(".libdvdvignore") {
         var lines []byte = nil;
@@ -94,7 +99,7 @@ func BuildIgnoreFile() error {
                 return err;
             }
         } else {
-            lines = []byte(ignore_file_message);
+            lines = []byte(standard_ignore_header);
         }
         err := ioutil.WriteFile(".libdvdvignore", lines, 0644);
         if err != nil {
@@ -105,9 +110,12 @@ func BuildIgnoreFile() error {
     return nil;
 }
 
+/*
+* Determines shell glob pattern types. Mentioned in the rules above.
+*/
 func determine_pattern_type(s string) int {
     s_len := len(s);
-    if (s)[0] == '#' {
+    if (s_len == 0)  || (s[0] == '#') {
         return p_reject;
     } else if s[0] == '!' {
         return p_neg;
@@ -124,9 +132,9 @@ func ParseIgnoreFile() *Ignore_shell_globs {
     if err != nil {
         return nil;
     }
-    line := strings.Split(lines, "\n");
+    line := strings.Split(string(lines), "\n");
 
-    p := new(ignore_shell_globs);
+    p := new(Ignore_shell_globs);
     p.Sg_simple = make([]string, 0, 25);
     p.Sg_dir = make([]string, 0, 25);
     p.Sg_main = make([]string, 0, 25);
@@ -135,9 +143,6 @@ func ParseIgnoreFile() *Ignore_shell_globs {
 
     for _,glob := range line {
         glob = strings.TrimSpace(glob);
-        if len(glob) == 0 {
-            continue;
-        }
         switch determine_pattern_type(glob) {
             case p_simple:
                 p.Sg_simple = append(p.Sg_simple, glob);
@@ -153,13 +158,14 @@ func ParseIgnoreFile() *Ignore_shell_globs {
                         p.Sg_not[1] = append(p.Sg_not[1],glob[1:len(glob)]);
                     case p_main:
                         p.Sg_not[2] = append(p.Sg_not[2],glob[1:len(glob)]);
-                    case default:
+                    default:
                         continue;
                 }
-            case default:
+            default:
                 continue;
         }
     }
+    return p;
 }
 
 func BuildIgnoreList(globs *Ignore_shell_globs) error {
@@ -182,7 +188,7 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
         }
         appendToIgnore(match);
     }
-    err := buildIgnoreListDirWalk(wd, globs);
+    err = buildIgnoreListDirWalk(wd, globs);
     if err == nil {
         err = negateFromIgnoreList(wd, globs);
     } else {
@@ -191,21 +197,21 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
     return err;
 }
 
-func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
+func buildIgnoreListDirWalk(path string, globs *Ignore_shell_globs) error {
     for _,s := range globs.Sg_simple {
-        match, err := filepath.Glob(wd+"/"+s);
+        match, err := filepath.Glob(path+"/"+s);
         if err != nil {
             return err;
         }
         appendToIgnore(match);
     }
-    for _,s := range golbs.Sg_dir {
-        match, err := filepath.Glob(wd+"/"+s);
+    for _,s := range globs.Sg_dir {
+        match, err := filepath.Glob(path+"/"+s);
         if err != nil {
             return err;
         }
         for i, m := range match {
-            match[i] = m[len(m)-1];
+            match[i] = m[0:len(m)-1];
         }
         appendToIgnore(match);
     }
@@ -214,7 +220,7 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
         return err;
     }
     for i := range finfo {
-        path2 := wd + "/" + finfo[i].Name();
+        path2 := path + "/" + finfo[i].Name();
         if finfo[i].IsDir() && (Check(path2) == nil) {
             err := buildIgnoreListDirWalk(path2, globs);
             if err != nil {
@@ -226,7 +232,7 @@ func buildIgnoreListDirWalk(path string, globs *ignore_shell_globs) error {
 }
 
 func negateFromIgnoreList(path string, globs *Ignore_shell_globs) error {
-    for _, p := globs.Sg_not[2] {
+    for _, p := range globs.Sg_not[2] {
         match, err := filepath.Glob(path+p);
         if err != nil {
             return err;
@@ -238,9 +244,11 @@ func negateFromIgnoreList(path string, globs *Ignore_shell_globs) error {
         }
         removeFromIgnore(match);
     }
-    err := negateFromIgnoreListDirWalk(path, globs);
-    if err != nil {
-        return err;
+    if globs.Sg_not[0] != nil || globs.Sg_not[1] != nil {
+        err := negateFromIgnoreListDirWalk(path, globs);
+        if err != nil {
+            return err;
+        }
     }
     return nil;
 }
@@ -254,7 +262,7 @@ func negateFromIgnoreListDirWalk(path string, globs *Ignore_shell_globs) error {
         removeFromIgnore(match);
     }
     for _,s := range globs.Sg_not[1] {
-        match, err := filepath.Glob(path);
+        match, err := filepath.Glob(path+"/"+s);
         if err != nil {
             return err;
         }
@@ -300,8 +308,11 @@ func removeFromIgnore(str []string) {
         e = next;
     }
 }
-
-func Check(s string) *Element {
+/*
+* Checks if a file should be ignored, if it returns a non nil pointer then YES
+* else NO.
+*/
+func Check(s string) *list.Element {
     for e := ignore.Front(); e != nil ; e = e.Next() {
         if e.Value.(string) == s {
             return e;

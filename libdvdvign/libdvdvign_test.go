@@ -1,52 +1,67 @@
 package libdvdvign
-import "testing"
 import "os"
-import "../libdvdvutil"
-import "bytes"
+import "testing"
 import "io/ioutil"
+import "../libdvdvutil"
 
-/*
-* Pass the directory where libdvdvign module should be initialized as a 
-* as a enviournment variable ign_dir
-*/
-func TestLibdvdvign(t *testing.T){
-    dir := os.Getenv("ign_dir");
-    if len(dir) == 0 {
-        t.Log("error-> empty value for ign_dir enviornment variable");
+var t1 string = `.tmp
+.temp
+.swp
+.exe`
+
+
+func TestLibdvdvign_BuildIgnoreFile(t *testing.T) {
+    d , err := ioutil.TempDir(".", "libdvdv-ignore-test");
+    if err != nil {
+        t.Log("test-> unable to create tmp directory");
+        t.Log("err-> ", err);
         t.Fail();
         return;
     }
-    if os.Chdir(dir) != nil {
-        t.Log("error-> unable to change directory");
+    os.Chdir(d);
+    t.Log("test-> changed to directory ", d);
+    Setup(t.Log);
+    //part-1
+    err = BuildIgnoreFile();
+    if err != nil {
+        t.Log("error-> ", err);
         t.Fail();
         return;
     }
-    if Init(t.Log) != nil {
-        t.Log("error-> init libdvdvign failed");
-        t.Fail();
-        return;
-    }
-    t.Log("test-> checking if .libdvdvignore file was built")
     if !libdvdvutil.PathExist(".libdvdvignore") {
+        t.Log("error-> unable to build file");
         t.Fail();
         return;
     }
-    if libdvdvutil.PathExist(".gitignore") {
-        t.Log("test-> detected .gitignore file, comparing .libdvdvignore with",
-                " .gitignore");
-        gitignore, err1 := ioutil.ReadFile(".gitignore");
-        libdvdvignore, err2 := ioutil.ReadFile(".libdvdvignore");
-        if (err1 != nil)  || (err2 != nil) {
-            t.Log("error-> ",err1,err2);
-            t.Fail();
-            return;
-        }
-        if !bytes.Equal(gitignore, libdvdvignore) {
-            t.Log("test-> faild, .gitignore's got diffrent content than ",
-                    ".libdvdvignore");
-            t.Fail();
-            return;
-        }
-        t.Log("test-> .gitignore content matches .libdvdvignore content");
+    os.Remove(".libdvdvignore");
+    if libdvdvutil.PathExist(".libdvdvignore") {
+        t.Log("error-> unable to delete file");
+        t.Fail();
+        return;
     }
+    //part-2
+    err = ioutil.WriteFile(".gitignore",[]byte(t1), 0644)
+    if err != nil {
+        t.Log("error-> ", err);
+        t.Fail();
+    }
+    Setup(t.Log);
+    err = BuildIgnoreFile();
+    if err != nil {
+        t.Log("error-> ", err);
+        t.Fail();
+        return;
+    }
+    new_file , err := ioutil.ReadFile(".libdvdvignore");
+    if err != nil {
+        t.Log("error-> ", err);
+        t.Fail();
+        return;
+    }
+    if string(new_file) != t1 {
+        t.Log("error-> new content is diffrent from .gitignore");
+        t.Fail();
+    }
+    os.Chdir("../");
+    os.RemoveAll(d+"/");
 }
