@@ -101,8 +101,7 @@ func BuildIgnoreFile() error {
         } else {
             lines = []byte(standard_ignore_header);
         }
-        err := ioutil.WriteFile(".libdvdvignore", lines, 0644);
-        if err != nil {
+        if err := ioutil.WriteFile(".libdvdvignore", lines, 0644); err != nil {
             libdvdvign_log(err);
             return err;
         }
@@ -188,8 +187,7 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
         }
         appendToIgnore(match);
     }
-    err = buildIgnoreListDirWalk(wd, globs);
-    if err == nil {
+    if err = buildIgnoreListDirWalk(wd, globs); err == nil {
         err = negateFromIgnoreList(wd, globs);
     } else {
         ignore.Init();
@@ -222,8 +220,7 @@ func buildIgnoreListDirWalk(path string, globs *Ignore_shell_globs) error {
     for i := range finfo {
         path2 := path + "/" + finfo[i].Name();
         if finfo[i].IsDir() && (Check(path2) == nil) {
-            err := buildIgnoreListDirWalk(path2, globs);
-            if err != nil {
+            if err := buildIgnoreListDirWalk(path2, globs); err != nil {
                 return err;
             }
         }
@@ -278,8 +275,7 @@ func negateFromIgnoreListDirWalk(path string, globs *Ignore_shell_globs) error {
     for _,info := range finfo {
         path2 := path + "/" + info.Name();
         if info.IsDir() && (Check(path2) == nil) {
-            err := negateFromIgnoreListDirWalk(path2, globs);
-            if err != nil {
+            if err := negateFromIgnoreListDirWalk(path2, globs); err != nil {
                 return err;
             }
         }

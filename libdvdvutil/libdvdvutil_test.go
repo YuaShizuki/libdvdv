@@ -45,3 +45,4 @@ func TestCreateFiles(t *testing.T) {
     os.Chdir("../")
     os.RemoveAll(wd);
 }
+
