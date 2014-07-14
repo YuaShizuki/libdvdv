@@ -4,13 +4,12 @@ import "testing"
 import "io/ioutil"
 import "../libdvdvutil"
 
-var t1 string = `.tmp
-.temp
-.swp
-.exe`
+func TestBuildIgnoreFile(t *testing.T) {
+    //content of .gitignore
+    t1 := `.swp
+    .ram
+    .cat`;
 
-
-func TestLibdvdvign_BuildIgnoreFile(t *testing.T) {
     d , err := ioutil.TempDir(".", "libdvdv-ignore-test");
     if err != nil {
         t.Log("test-> unable to create tmp directory");
@@ -19,7 +18,6 @@ func TestLibdvdvign_BuildIgnoreFile(t *testing.T) {
         return;
     }
     os.Chdir(d);
-    t.Log("test-> changed to directory ", d);
     Setup(t.Log);
     //part-1
     err = BuildIgnoreFile();
@@ -64,4 +62,7 @@ func TestLibdvdvign_BuildIgnoreFile(t *testing.T) {
     }
     os.Chdir("../");
     os.RemoveAll(d+"/");
+}
+
+func TestParseIgnoreFile(t *testing.T) {
 }
