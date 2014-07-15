@@ -36,7 +36,7 @@ func TestCreateFiles(t *testing.T) {
     if !test_path_exist_passed {
         t.SkipNow();
     }
-    wd, err := ioutil.TempDir(".", "TestBuildFs");
+    wd, err := ioutil.TempDir(".", "lddTest");
     if err != nil {
         t.Log("test-> ",err);
         t.Fail();
@@ -48,9 +48,16 @@ func TestCreateFiles(t *testing.T) {
         return;
     }
     fs := make(map[string][]byte);
-    fs["keshav.txt"] = []byte("working...");
-    fs["darvin.txt"] = []byte("working...");
-    fs["jack/issac.txt"] = []byte("free now ...");
+    fs[".libdvdvignore"] = []byte{1};
+    fs["foo/f.t"] = []byte{1};
+    fs["foo/f2.t"] = []byte{1}
+    fs["foo/bar/fb.t"] = []byte{0};
+    fs["foo/bar/fb2.t"] = []byte{0};
+    fs["m.t"] = []byte{0};
+    fs["m.r"] = []byte{1};
+    fs["foo2/f20.t"] = []byte{1};
+    fs["foo2/tar/ft.t"] = []byte{1};
+    fs["foo2/zar/"] = []byte{0};
     err = CreateFiles(fs);
     if err != nil {
         t.Fatal("error->", err);
@@ -60,8 +67,6 @@ func TestCreateFiles(t *testing.T) {
             t.Fatal("error-> path=",k," does not exist");
         }
     }
-    os.Chdir("../")
-    os.RemoveAll(wd);
 }
 
 func TestRemoveFiles(t *testing.T) {
@@ -94,6 +99,11 @@ func TestRemoveFiles(t *testing.T) {
     }
 }
 
+func TestCleanup(t *testing.T) {
+    if err := ForTestCleanupTemp(t); err != nil {
+        t.Fatal("error-> _______ UNABLE TO CLEAN ________ ");
+    }
+}
 
 
 

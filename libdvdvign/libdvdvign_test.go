@@ -5,7 +5,6 @@ import "os"
 import "testing"
 import "io/ioutil"
 import "../libdvdvutil"
-import "path"
 
 func TestBuildIgnoreFile(t *testing.T) {
     //content of .gitignore
@@ -48,7 +47,6 @@ func TestBuildIgnoreFile(t *testing.T) {
         t.Fatal("error-> .gitignore != .libdvdvignore");
     }
     os.Chdir("../");
-    os.RemoveAll(d+"/");
 }
 
 func TestParseIgnoreFile(t *testing.T) {
@@ -95,29 +93,64 @@ func TestParseIgnoreFile(t *testing.T) {
     if globs.Sg_not[2][0] != t1[4][1:len(t1[4])] {
         t.Fatal("error-> error parsing ", t1[4]);
     }
+    os.Chdir("../");
 }
 
-func TestCleanup(t *testing.T){
-    libdvdvutil.Setup(t.Log);
-    wd, err := os.Getwd();
+func TestIgnoreList(t *testing.T) {
+    d, err := ioutil.TempDir(".", "lddTest");
     if err != nil {
-        t.Fatal("error-> _________ UNABLE TO CLEAN _________", err);
+        t.Fatal("error-> while creating temp directory", err);
     }
-    for {
-        var matched bool;
-        if matched,_ = path.Match("lddTest*", path.Base(wd)); matched {
-            wd = path.Dir(wd);
-        } else {
-            break;
+    if err = os.Chdir(d); err != nil {
+        t.Fatal("error-> unable to change directory: ", err);
+    }
+    tmp := []string{
+        "/foo/*",
+        "!foo/bar/",
+        "*.r",
+        "car/",
+        "/foo2/*",
+        "!zar/"};
+
+    Setup(t.Log);
+    fs := make(map[string][]byte);
+    fs[".libdvdvignore"] = []byte(strings.Join(tmp, "\n"));
+    fs["foo/f.t"] = []byte{1};
+    fs["foo/f2.t"] = []byte{1}
+    fs["foo/bar/fb.t"] = []byte{0, 1};
+    fs["foo/bar/fb2.t"] = []byte{0, 1};
+    fs["m.t"] = []byte{0, 1};
+    fs["m.r"] = []byte{1};
+    fs["foo2/f20.t"] = []byte{1};
+    fs["foo2/car/ft.t"] = []byte{0,1};
+    fs["foo2/zar/"] = []byte{0, 1};
+    if err = libdvdvutil.CreateFiles(fs); err != nil {
+        t.Fatal("error-> libdvdvutil.CreateFiles returning :", err);
+    }
+    if err = BuildIgnoreList(ParseIgnoreFile()); err != nil {
+        t.Fatal("error-> unable to build ignore list: ", err);
+    }
+    if d , err = os.Getwd(); err != nil {
+        t.Fatal("error-> unable to get pwd: ", err);
+    }
+    for k, v := range fs {
+        if k == ".libdvdvignore" {
+            continue;
+        }
+        ck := Check(d+"/"+k);
+        if ((ck != nil) && (v[0] == 0)) || ((ck == nil) && (v[0] == 1)){
+            t.Log("error-> failed for file=",k);
+            t.Fail();
         }
     }
-    err = os.Chdir(wd);
-    if err != nil {
+}
+
+/*
+* This is not a test, but only a clean up function
+*/
+func TestCleanup(t *testing.T){
+    if err := libdvdvutil.ForTestCleanupTemp(t); err != nil {
         t.Fatal("error-> _________ UNABLE TO CLEAN _________");
-    }
-    err = libdvdvutil.RemoveFiles("lddTest*", wd);
-    if err != nil {
-        t.Fatal("error-> _________ UNABLE TO CLEAN _________")
     }
 }
 

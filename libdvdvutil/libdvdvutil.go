@@ -8,6 +8,7 @@ import "io/ioutil"
 import "path"
 import "path/filepath"
 import "errors"
+import "testing"
 
 var libdvdvutil_log func(a ...interface{}) = func(a ...interface{}) {};
 
@@ -50,7 +51,9 @@ func IsDir(path string) bool {
 func CreateFiles(fs map[string][]byte) error {
     for k, v := range fs {
         if !PathExist(path.Dir(k)) {
-            os.Mkdir(path.Dir(k), 0744);
+            if err := os.MkdirAll(path.Dir(k), 0744); err != nil {
+                return err;
+            }
         }
         if k[len(k)-1] == '/' {
             continue;
@@ -84,6 +87,27 @@ func RemoveFiles(pattern string, dir string) error {
         if PathExist(f[i]) {
             return errors.New("failed to remove file -> "+f[i]);
         }
+    }
+    return nil;
+}
+
+func ForTestCleanupTemp(t *testing.T) error {
+    wd, err := os.Getwd();
+    if err != nil {
+        return err;
+    }
+    for {
+        if m,_ := path.Match("lddTest*", path.Base(wd)); m {
+            wd = path.Dir(wd);
+        } else {
+            break;
+        }
+    }
+    if err = os.Chdir(wd); err != nil {
+        return err;
+    }
+    if err = RemoveFiles("lddTest*", wd); err != nil {
+        return err;
     }
     return nil;
 }
