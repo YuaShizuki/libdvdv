@@ -91,6 +91,10 @@ func RemoveFiles(pattern string, dir string) error {
     return nil;
 }
 
+/*
+* This function is used mostely during testing, to delete temp files or folders
+* created.
+*/
 func ForTestCleanupTemp(t *testing.T) error {
     wd, err := os.Getwd();
     if err != nil {
