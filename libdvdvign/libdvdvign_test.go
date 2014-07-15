@@ -81,22 +81,44 @@ func TestParseIgnoreFile(t *testing.T) {
     if (len(globs.Sg_dir) != 1) || (globs.Sg_dir[0] != t1[2]) {
         t.Fatal("error-> error parsing ", t1[2])
     }
-    for i := range globs.Sg_not {
-        if (len(globs.Sg_not[i]) != 1) || (globs.Sg_not[i][0] != t1[3+i][1:len(t1[3+i])]) {
-            t.Fatal("error-> error parsing", globs.Sg_not[i][0]);
+    for _, v := range globs.Sg_not {
+        if len(v) != 1 {
+            t.Fatal("error-> error parsing not pattern");
         }
+    }
+    if globs.Sg_not[0][0] != t1[3][1:len(t1[3])] {
+        t.Fatal("error-> error parsing ", t1[3]);
+    }
+    if globs.Sg_not[1][0] != t1[5][1:len(t1[5])] {
+        t.Fatal("error-> error parsing ", t1[5]);
+    }
+    if globs.Sg_not[2][0] != t1[4][1:len(t1[4])] {
+        t.Fatal("error-> error parsing ", t1[4]);
     }
 }
 
 func TestCleanup(t *testing.T){
-    t.Log("test-> final cleanup");
-    wd := os.Getwd();
+    libdvdvutil.Setup(t.Log);
+    wd, err := os.Getwd();
+    if err != nil {
+        t.Fatal("error-> _________ UNABLE TO CLEAN _________", err);
+    }
     for {
-        if path.Match("lddTest*", path.Base(path.Dir(wd))) {
+        var matched bool;
+        if matched,_ = path.Match("lddTest*", path.Base(wd)); matched {
             wd = path.Dir(wd);
+        } else {
+            break;
         }
     }
-
+    err = os.Chdir(wd);
+    if err != nil {
+        t.Fatal("error-> _________ UNABLE TO CLEAN _________");
+    }
+    err = libdvdvutil.RemoveFiles("lddTest*", wd);
+    if err != nil {
+        t.Fatal("error-> _________ UNABLE TO CLEAN _________")
+    }
 }
 
 
