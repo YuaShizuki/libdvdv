@@ -22,11 +22,11 @@ func TestBuildIgnoreFile(t *testing.T) {
     if err := BuildIgnoreFile(); err != nil {
         t.Fatal("error-> ", err);
     }
-    if !libdvdvutil.PathExist(".libdvdvignore") {
+    if exist,_ := libdvdvutil.PathExist(".libdvdvignore"); !exist {
         t.Fatal("error-> unable to build file");
     }
     os.Remove(".libdvdvignore");
-    if libdvdvutil.PathExist(".libdvdvignore") {
+    if exist,_ := libdvdvutil.PathExist(".libdvdvignore"); exist {
         t.Fatal("error-> unable to delete file");
     }
     //part-2

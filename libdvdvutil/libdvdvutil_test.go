@@ -6,10 +6,10 @@ import "path/filepath"
 
 var test_path_exist_passed = false;
 func TestPathExist(t *testing.T) {
-    if !PathExist("libdvdvutil_test.go") {
+    if exist,_ := PathExist("libdvdvutil_test.go"); !exist {
         t.FailNow();
     }
-    if PathExist("dediejaijdjiejdaide.txt") {
+    if exist,_ := PathExist("dediejaijdjiejdaide.txt"); exist {
         t.FailNow();
     }
     test_path_exist_passed = true;
@@ -63,7 +63,7 @@ func TestCreateFiles(t *testing.T) {
         t.Fatal("error->", err);
     }
     for k,_ := range fs {
-        if !PathExist(k) {
+        if exist,_ := PathExist(k); !exist {
             t.Fatal("error-> path=",k," does not exist");
         }
     }
@@ -93,7 +93,7 @@ func TestRemoveFiles(t *testing.T) {
         t.Fatal("error-> ", err);
     }
     for i := range m {
-        if PathExist(m[i]) {
+        if exist,_ := PathExist(m[i]); exist {
             t.Fatal("error-> RemoveFiles failed");
         }
     }
@@ -103,13 +103,13 @@ func TestIsBinaryExecutable(t *testing.T) {
     if !test_path_exist_passed {
         t.SkipNow();
     }
-    if PathExist("/bin/ls") {
-        if exe,_ := IsBinaryExecutable("/bin/ls"); !exe {
+    if exist,info := PathExist("/bin/ls"); exist {
+        if exe,_ := IsBinaryExecutable("/bin/ls", info); !exe {
             t.Fatal("error-> test reporting /bin/ls is not binary executable");
         }
     }
-    if PathExist("/etc/hosts") {
-        if exe,_ := IsBinaryExecutable("/etc/hosts"); exe {
+    if exist,info := PathExist("/etc/hosts"); exist {
+        if exe,_ := IsBinaryExecutable("/etc/hosts", info); exe {
             t.Fatal("error-> test reporting /etc/hosts is binary executable");
         }
     }

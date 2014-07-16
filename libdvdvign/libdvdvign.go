@@ -89,9 +89,9 @@ func Setup(log func(a ...interface{})) error {
 * Builds ".libdvdvignore" file in current directory.
 */
 func BuildIgnoreFile() error {
-    if !libdvdvutil.PathExist(".libdvdvignore") {
+    if exist,_ := libdvdvutil.PathExist(".libdvdvignore"); !exist {
         var lines []byte = nil;
-        if libdvdvutil.PathExist(".gitignore") {
+        if exist2,_ := libdvdvutil.PathExist(".gitignore"); exist2 {
             var err error;
             lines, err = ioutil.ReadFile(".gitignore");
             if err != nil {

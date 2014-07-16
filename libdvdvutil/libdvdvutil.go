@@ -20,15 +20,15 @@ func Setup(log func(a ...interface{})) {
 /*
 * Checks if a file path exists
 */
-func PathExist(path string) bool {
-    _,err :=  os.Stat(path)
+func PathExist(path string) (bool, os.FileInfo) {
+    info, err :=  os.Stat(path)
     if err != nil {
         if os.IsNotExist(err) {
-            return false;
+            return false, info;
         }
         panic("panic-> cannot determine if path exists");
     }
-    return true;
+    return true, info ;
 }
 
 /*
@@ -52,7 +52,7 @@ func IsDir(path string) bool {
 */
 func CreateFiles(fs map[string][]byte) error {
     for k, v := range fs {
-        if !PathExist(path.Dir(k)) {
+        if exist,_ := PathExist(path.Dir(k)); !exist {
             if err := os.MkdirAll(path.Dir(k), 0744); err != nil {
                 return err;
             }
@@ -86,17 +86,23 @@ func RemoveFiles(pattern string, dir string) error {
         if err != nil {
             return err;
         }
-        if PathExist(f[i]) {
+        if exist,_ := PathExist(f[i]); exist {
             return errors.New("failed to remove file -> "+f[i]);
         }
     }
     return nil;
 }
 
-func IsBinaryExecutable(path string) (bool, os.FileInfo) {
-    info, err := os.Stat(path);
-    if err != nil {
-        return false, nil;
+func IsBinaryExecutable(path string, finfo os.FileInfo) (bool, os.FileInfo) {
+    var err error;
+    var info os.FileInfo;
+    if finfo != nil {
+        info = finfo;
+    } else {
+        info, err = os.Stat(path);
+        if err != nil {
+            return false, nil;
+        }
     }
     if info.IsDir() {
         return false, info;
