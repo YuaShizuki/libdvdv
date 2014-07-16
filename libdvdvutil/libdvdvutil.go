@@ -9,6 +9,7 @@ import "path"
 import "path/filepath"
 import "errors"
 import "testing"
+import "bytes"
 
 var libdvdvutil_log func(a ...interface{}) = func(a ...interface{}) {};
 
@@ -32,6 +33,7 @@ func PathExist(path string) bool {
 
 /*
 * Returns whether a path is a directory or a string.
+* returns false if path does not exist
 */
 func IsDir(path string) bool {
     info, err := os.Stat(path);
@@ -89,6 +91,26 @@ func RemoveFiles(pattern string, dir string) error {
         }
     }
     return nil;
+}
+
+func IsBinaryExecutable(path string) (bool, os.FileInfo) {
+    info, err := os.Stat(path);
+    if err != nil {
+        return false, nil;
+    }
+    if info.IsDir() {
+        return false, info;
+    }
+    perm := info.Mode().Perm();
+    if ((perm % 2) != 0)  || (((perm >> 3)% 2) != 0) || (((perm >> 6)%2) != 0) {
+        content, err := ioutil.ReadFile(path);
+        if err != nil {
+            return false, info;
+        } else if bytes.Count(content, []byte{0}) > 1 {
+            return true, info;
+        }
+    }
+    return false, info;
 }
 
 /*

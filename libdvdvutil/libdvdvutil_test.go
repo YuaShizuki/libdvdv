@@ -99,6 +99,22 @@ func TestRemoveFiles(t *testing.T) {
     }
 }
 
+func TestIsBinaryExecutable(t *testing.T) {
+    if !test_path_exist_passed {
+        t.SkipNow();
+    }
+    if PathExist("/bin/ls") {
+        if exe,_ := IsBinaryExecutable("/bin/ls"); !exe {
+            t.Fatal("error-> test reporting /bin/ls is not binary executable");
+        }
+    }
+    if PathExist("/etc/hosts") {
+        if exe,_ := IsBinaryExecutable("/etc/hosts"); exe {
+            t.Fatal("error-> test reporting /etc/hosts is binary executable");
+        }
+    }
+}
+
 func TestCleanup(t *testing.T) {
     if err := ForTestCleanupTemp(t); err != nil {
         t.Fatal("error-> _______ UNABLE TO CLEAN ________ ");
