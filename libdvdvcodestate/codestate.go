@@ -1,22 +1,41 @@
 package libdvdvcodestate
 
 /*
-* This package is responsible to retrive the state of the file system.
-* ie which new files are added, which files are removed and which files are 
-* modified. Basic use case for this module is to initilize it in a directory
-* then call GetState() to get new changes or to update new changes.
+* Libdevdev Code State builds a sqlite database aka (state-DB) inside .libdvdv 
+* directory. state-DB stores the most recent version of the directory state. 
+* This module can be used to check the files that have been changed since last
+* update. 
+* Libdevdev Ignore is a dependancie.
 */
-var LibdvdvLog func(a ...interface{})(...interface{}) = func(a...interface{}){} 
 
-func Build(path string) error {
+/* personal log function */
+var LibdvdvLog func(a ...interface{})(...interface{}) = func(a...interface{}){};
+
+/*
+* Builds a database that represents overtime changes in files and directories of 
+* "record". "record" is a file path, a directory to start recording changes in.
+*/
+func BuildStateDB(record string) error {
+    return nil;
 }
 
+/*
+* GetState() shows the changes since last update.
+*/
 func GetState() error {
+    return nil;
 }
 
-func Update() error {
-
+/*
+* Update() updates the state DB. 
+*/
+func UpdateStateDB() error {
+    return nil;
 }
 
-func Clean() error {
+/*
+* ClearStateDB() clears the state database.
+*/
+func ClearStateDB() error {
+    return nil;
 }
