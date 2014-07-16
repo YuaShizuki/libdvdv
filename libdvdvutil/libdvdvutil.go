@@ -11,11 +11,7 @@ import "errors"
 import "testing"
 import "bytes"
 
-var libdvdvutil_log func(a ...interface{}) = func(a ...interface{}) {};
-
-func Setup(log func(a ...interface{})) {
-    libdvdvutil_log = log;
-}
+var LibdvdvLog func(a ...interface{}) = func(a ...interface{}){};
 
 /*
 * Checks if a file path exists

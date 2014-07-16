@@ -27,7 +27,7 @@ import "container/list"
 import "path/filepath"
 import "errors"
 
-var libdvdvign_log func(a ...interface{}) = func(a ...interface{}) { };
+var LibdvdvLog func(a ...interface{}) = func(a ...interface{}){};
 
 /*Ignore file list*/
 var ignore *list.List;
@@ -71,20 +71,6 @@ var standard_ignore_header string =
 .*
 *.o
 `
-
-/* 
-* Standard setup function.  
-*/
-func Setup(log func(a ...interface{})) error {
-    if log != nil {
-        libdvdvign_log = log;
-    }
-    if ignore != nil {
-        ignore.Init();
-    }
-    return nil;
-}
-
 /*
 * Builds ".libdvdvignore" file in current directory.
 */
@@ -95,14 +81,14 @@ func BuildIgnoreFile() error {
             var err error;
             lines, err = ioutil.ReadFile(".gitignore");
             if err != nil {
-                libdvdvign_log("error-> unable to read .gitignore file");
+                LibdvdvLog("error-> unable to read .gitignore file");
                 return err;
             }
         } else {
             lines = []byte(standard_ignore_header);
         }
         if err := ioutil.WriteFile(".libdvdvignore", lines, 0644); err != nil {
-            libdvdvign_log(err);
+            LibdvdvLog(err);
             return err;
         }
     }
@@ -168,6 +154,9 @@ func ParseIgnoreFile() *Ignore_shell_globs {
 }
 
 func BuildIgnoreList(globs *Ignore_shell_globs) error {
+    if ignore != nil {
+        ignore.Init();
+    }
     if globs == nil {
         return errors.New("unknown error, shell globs empty");
     }

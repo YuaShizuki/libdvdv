@@ -17,7 +17,7 @@ func TestBuildIgnoreFile(t *testing.T) {
         t.Fatal("err-> ", err);
     }
     os.Chdir(d);
-    Setup(t.Log);
+    LibdvdvLog = t.Log;
     //part-1
     if err := BuildIgnoreFile(); err != nil {
         t.Fatal("error-> ", err);
@@ -34,7 +34,6 @@ func TestBuildIgnoreFile(t *testing.T) {
     if err != nil {
         t.Fatal("error-> ", err);
     }
-    Setup(t.Log);
     if err := BuildIgnoreFile(); err != nil {
         t.Fatal("error-> ", err);
         return;
@@ -66,7 +65,7 @@ func TestParseIgnoreFile(t *testing.T) {
     if err != nil {
         t.Fatal("error-> ", err);
     }
-    Setup(t.Log);
+
     if globs = ParseIgnoreFile(); globs == nil {
         t.Fatal("error-> unable to parese ignore file");
     }
@@ -112,7 +111,6 @@ func TestIgnoreList(t *testing.T) {
         "/foo2/*",
         "!zar/"};
 
-    Setup(t.Log);
     fs := make(map[string][]byte);
     fs[".libdvdvignore"] = []byte(strings.Join(tmp, "\n"));
     fs["foo/f.t"] = []byte{1};
