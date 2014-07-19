@@ -21,7 +21,6 @@ package libdvdvign
 
 import "../libdvdvutil"
 import "strings"
-import "os"
 import "io/ioutil"
 import "container/list"
 import "path/filepath"
@@ -31,6 +30,7 @@ var LibdvdvLog func(a ...interface{}) = func(a ...interface{}){};
 
 /*Ignore file list*/
 var ignore *list.List;
+var rm_frm_path int;
 
 /* 
 * Data structure to represent parsed ignore file, based on the rules mentioned 
@@ -41,6 +41,7 @@ type Ignore_shell_globs struct {
     Sg_dir []string;
     Sg_main []string;
     Sg_not [3][]string;
+    ProjectDir string;
 };
 
 /*
@@ -74,12 +75,14 @@ var standard_ignore_header string =
 /*
 * Builds ".libdvdvignore" file in current directory.
 */
-func BuildIgnoreFile() error {
-    if exist,_ := libdvdvutil.PathExist(".libdvdvignore"); !exist {
+func BuildIgnoreFile(indir string) error {
+    libdvdvignore_file_path := indir+"/.libdvdvignore";
+    gitignore_file_path := indir+"/.gitignore";
+    if exist,_ := libdvdvutil.PathExist(libdvdvignore_file_path); !exist {
         var lines []byte = nil;
-        if exist2,_ := libdvdvutil.PathExist(".gitignore"); exist2 {
+        if exist2,_ := libdvdvutil.PathExist(gitignore_file_path); exist2 {
             var err error;
-            lines, err = ioutil.ReadFile(".gitignore");
+            lines, err = ioutil.ReadFile(gitignore_file_path);
             if err != nil {
                 LibdvdvLog("error-> unable to read .gitignore file");
                 return err;
@@ -87,7 +90,7 @@ func BuildIgnoreFile() error {
         } else {
             lines = []byte(standard_ignore_header);
         }
-        if err := ioutil.WriteFile(".libdvdvignore", lines, 0644); err != nil {
+        if err := ioutil.WriteFile(libdvdvignore_file_path, lines, 0644); err != nil {
             LibdvdvLog(err);
             return err;
         }
@@ -112,8 +115,8 @@ func determine_pattern_type(s string) int {
     return p_simple;
 }
 
-func ParseIgnoreFile() *Ignore_shell_globs {
-    lines, err := ioutil.ReadFile(".libdvdvignore");
+func ParseIgnoreFile(indir string) *Ignore_shell_globs {
+    lines, err := ioutil.ReadFile(indir+"/.libdvdvignore");
     if err != nil {
         return nil;
     }
@@ -125,7 +128,7 @@ func ParseIgnoreFile() *Ignore_shell_globs {
     p.Sg_main = make([]string, 0, 25);
     p.Sg_not = [3][]string {    make([]string,0, 15), make([]string,0,15),
                                 make([]string,0,15)};
-
+    p.ProjectDir = indir;
     for _,glob := range line {
         glob = strings.TrimSpace(glob);
         switch determine_pattern_type(glob) {
@@ -160,12 +163,9 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
     if globs == nil {
         return errors.New("unknown error, shell globs empty");
     }
-    wd, err := os.Getwd();
-    if err != nil {
-        return err;
-    }
+    rm_frm_path = len(globs.ProjectDir)+1;
     for _,s := range globs.Sg_main {
-        match, err := filepath.Glob(wd+s);
+        match, err := filepath.Glob(globs.ProjectDir+s);
         if err != nil {
             return err;
         }
@@ -176,8 +176,9 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
         }
         appendToIgnore(match);
     }
-    if err = buildIgnoreListDirWalk(wd, globs); err == nil {
-        err = negateFromIgnoreList(wd, globs);
+    var err error;
+    if err = buildIgnoreListDirWalk(globs.ProjectDir, globs); err == nil {
+        err = negateFromIgnoreList(globs.ProjectDir, globs);
     } else {
         ignore.Init();
     }
@@ -276,8 +277,8 @@ func appendToIgnore(str []string) {
     if ignore == nil {
         ignore = list.New();
     }
-    for i := range str {
-        ignore.PushBack(str[i]);
+    for _,s := range str {
+        ignore.PushBack(s[rm_frm_path:len(s)]);
     }
 }
 
@@ -285,7 +286,7 @@ func removeFromIgnore(str []string) {
     for e := ignore.Front(); e != nil; {
         next := e.Next();
         for _,s := range str {
-            if s == e.Value.(string) {
+            if s[rm_frm_path:len(s)] == e.Value.(string) {
                 ignore.Remove(e);
                 break;
             }

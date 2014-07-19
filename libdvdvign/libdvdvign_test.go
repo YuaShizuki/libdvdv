@@ -16,43 +16,38 @@ func TestBuildIgnoreFile(t *testing.T) {
     if err != nil {
         t.Fatal("err-> ", err);
     }
-    os.Chdir(d);
     LibdvdvLog = t.Log;
     //part-1
-    if err := BuildIgnoreFile(); err != nil {
+    if err := BuildIgnoreFile(d); err != nil {
         t.Fatal("error-> ", err);
     }
-    if exist,_ := libdvdvutil.PathExist(".libdvdvignore"); !exist {
+    if exist,_ := libdvdvutil.PathExist(d+"/.libdvdvignore"); !exist {
         t.Fatal("error-> unable to build file");
     }
-    os.Remove(".libdvdvignore");
-    if exist,_ := libdvdvutil.PathExist(".libdvdvignore"); exist {
-        t.Fatal("error-> unable to delete file");
-    }
+    os.Remove(d+"/.libdvdvignore");
     //part-2
-    err = ioutil.WriteFile(".gitignore",[]byte(t1), 0644)
+    err = ioutil.WriteFile(d+"/.gitignore",[]byte(t1), 0644)
     if err != nil {
         t.Fatal("error-> ", err);
     }
-    if err := BuildIgnoreFile(); err != nil {
+    if err := BuildIgnoreFile(d); err != nil {
         t.Fatal("error-> ", err);
         return;
     }
-    new_file , err := ioutil.ReadFile(".libdvdvignore");
+    new_file , err := ioutil.ReadFile(d+"/.libdvdvignore");
     if err != nil {
         t.Fatal("error-> ", err);
     }
     if string(new_file) != t1 {
         t.Fatal("error-> .gitignore != .libdvdvignore");
     }
-    os.Chdir("../");
 }
 
 func TestParseIgnoreFile(t *testing.T) {
     var globs *Ignore_shell_globs;
     d , err := ioutil.TempDir(".", "lddTest");
-    if err := os.Chdir(d); err != nil {
-        t.Fatal("error-> ", err);
+    if err != nil {
+        t.Fatal(err);
     }
     t1 := []string {
         "*.txt",
@@ -61,12 +56,11 @@ func TestParseIgnoreFile(t *testing.T) {
         "!*.txt",
         "!/foo/bar/",
         "!foos/dark/"};
-    err = ioutil.WriteFile(".libdvdvignore", []byte(strings.Join(t1, "\n")), 0644);
+    err = ioutil.WriteFile(d+"/.libdvdvignore", []byte(strings.Join(t1, "\n")), 0644);
     if err != nil {
         t.Fatal("error-> ", err);
     }
-
-    if globs = ParseIgnoreFile(); globs == nil {
+    if globs = ParseIgnoreFile(d); globs == nil {
         t.Fatal("error-> unable to parese ignore file");
     }
     if (len(globs.Sg_simple) != 1) || (globs.Sg_simple[0] != t1[0]) {
@@ -92,16 +86,12 @@ func TestParseIgnoreFile(t *testing.T) {
     if globs.Sg_not[2][0] != t1[4][1:len(t1[4])] {
         t.Fatal("error-> error parsing ", t1[4]);
     }
-    os.Chdir("../");
 }
 
 func TestIgnoreList(t *testing.T) {
     d, err := ioutil.TempDir(".", "lddTest");
     if err != nil {
         t.Fatal("error-> while creating temp directory", err);
-    }
-    if err = os.Chdir(d); err != nil {
-        t.Fatal("error-> unable to change directory: ", err);
     }
     tmp := []string{
         "/foo/*",
@@ -112,30 +102,30 @@ func TestIgnoreList(t *testing.T) {
         "!zar/"};
 
     fs := make(map[string][]byte);
-    fs[".libdvdvignore"] = []byte(strings.Join(tmp, "\n"));
-    fs["foo/f.t"] = []byte{1};
-    fs["foo/f2.t"] = []byte{1}
-    fs["foo/bar/fb.t"] = []byte{0, 1};
-    fs["foo/bar/fb2.t"] = []byte{0, 1};
-    fs["m.t"] = []byte{0, 1};
-    fs["m.r"] = []byte{1};
-    fs["foo2/f20.t"] = []byte{1};
-    fs["foo2/car/ft.t"] = []byte{0,1};
-    fs["foo2/zar/"] = []byte{0, 1};
+    fs[d+"/.libdvdvignore"] = []byte(strings.Join(tmp, "\n"));
+    fs[d+"/foo/f.t"] = []byte{1};
+    fs[d+"/foo/f2.t"] = []byte{1}
+    fs[d+"/foo/bar/fb.t"] = []byte{0, 1};
+    fs[d+"/foo/bar/fb2.t"] = []byte{0, 1};
+    fs[d+"/m.t"] = []byte{0, 1};
+    fs[d+"/m.r"] = []byte{1};
+    fs[d+"/foo2/f20.t"] = []byte{1};
+    fs[d+"/foo2/car/ft.t"] = []byte{0,1};
+    fs[d+"/foo2/zar/"] = []byte{0, 1};
     if err = libdvdvutil.CreateFiles(fs); err != nil {
         t.Fatal("error-> libdvdvutil.CreateFiles returning :", err);
     }
-    if err = BuildIgnoreList(ParseIgnoreFile()); err != nil {
+    if err = BuildIgnoreList(ParseIgnoreFile(d)); err != nil {
         t.Fatal("error-> unable to build ignore list: ", err);
     }
-    if d , err = os.Getwd(); err != nil {
-        t.Fatal("error-> unable to get pwd: ", err);
+    for e := ignore.Front(); e != nil; e = e.Next() {
+        t.Log(e.Value.(string));
     }
     for k, v := range fs {
         if k == ".libdvdvignore" {
             continue;
         }
-        ck := Check(d+"/"+k);
+        ck := Check(k[len(d)+1:len(k)]);
         if ((ck != nil) && (v[0] == 0)) || ((ck == nil) && (v[0] == 1)){
             t.Log("error-> failed for file=",k);
             t.Fail();
