@@ -176,11 +176,14 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
         }
         appendToIgnore(match);
     }
-    var err error;
+    var err error = nil;
     if err = buildIgnoreListDirWalk(globs.ProjectDir, globs); err == nil {
         err = negateFromIgnoreList(globs.ProjectDir, globs);
     } else {
         ignore.Init();
+    }
+    for e := ignore.Front(); e != nil; e = e.Next() {
+        LibdvdvLog(e.Value.(string));
     }
     return err;
 }
@@ -299,6 +302,9 @@ func removeFromIgnore(str []string) {
 * else NO.
 */
 func Check(s string) *list.Element {
+    if ignore == nil {
+        return nil;
+    }
     for e := ignore.Front(); e != nil ; e = e.Next() {
         if e.Value.(string) == s {
             return e;

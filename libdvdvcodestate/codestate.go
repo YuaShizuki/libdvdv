@@ -14,6 +14,7 @@ import "database/sql"
 import _ "github.com/mattn/go-sqlite3"
 import "errors"
 import "io/ioutil"
+import "../libdvdvign"
 
 /* personal log function */
 var LibdvdvLog func(a ...interface{}) = func(a...interface{}){};
@@ -71,7 +72,16 @@ func UpdateStateDB(record string) error {
             }
         }
     }
-    if err := enterDirState(record, len(record)+1, conn); err != nil {
+    temp := libdvdvign.ParseIgnoreFile(record);
+    if temp == nil {
+        return errors.New("error: libdevdev ignore not executed, please initialize "+
+                            "this project by executing $libdevdev ignore");
+    }
+    err = libdvdvign.BuildIgnoreList(temp);
+    if err != nil {
+        return err;
+    }
+    if err = enterDirState(record, len(record)+1, conn); err != nil {
         return err;
     }
     return nil;
@@ -87,6 +97,9 @@ func enterDirState(dir string, base int, conn *sql.DB) error {
     }
     for i := range finfo {
         new_entry := dir + "/" + finfo[i].Name();
+        if libdvdvign.Check(new_entry[base:len(new_entry)]) != nil {
+            continue;
+        }
         if finfo[i].IsDir() {
             err := enterDirState(new_entry, base, conn);
             if err != nil {
