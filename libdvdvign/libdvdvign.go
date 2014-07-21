@@ -76,6 +76,9 @@ var standard_ignore_header string =
 * Builds ".libdvdvignore" file in current directory.
 */
 func BuildIgnoreFile(indir string) error {
+    if (len(indir) != 0) && (indir[len(indir)-1] == '/') {
+        indir = indir[0:len(indir)-1];
+    }
     libdvdvignore_file_path := indir+"/.libdvdvignore";
     gitignore_file_path := indir+"/.gitignore";
     if exist,_ := libdvdvutil.PathExist(libdvdvignore_file_path); !exist {
@@ -116,6 +119,9 @@ func determine_pattern_type(s string) int {
 }
 
 func ParseIgnoreFile(indir string) *Ignore_shell_globs {
+    if (len(indir) != 0) && (indir[len(indir)-1] == '/') {
+        indir = indir[0:len(indir)-1];
+    }
     lines, err := ioutil.ReadFile(indir+"/.libdvdvignore");
     if err != nil {
         return nil;
