@@ -81,6 +81,7 @@ main:
             os.WriteFile(".libdvdv/sid.i", sid);
             libdvdvupdate.Setup();
         else:
+            "wallet not yet constructed, please execute $ libdvdv m wallet";
             return;
 
     if "libdvdv m pushupdate":
@@ -92,3 +93,5 @@ main:
     
     if "libdvdv m wallet":
         
+
+
