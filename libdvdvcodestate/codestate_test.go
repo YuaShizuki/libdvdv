@@ -5,6 +5,7 @@ import "../libdvdvign"
 import "testing"
 
 func TestBuildStateDB(t *testing.T) {
+    LibdvdvLog = t.Log;
     libdvdvign.LibdvdvLog = t.Log;
     libdvdvign.BuildIgnoreFile("../");
     if err := BuildStateDB("../"); err != nil {

@@ -188,9 +188,6 @@ func BuildIgnoreList(globs *Ignore_shell_globs) error {
     } else {
         ignore.Init();
     }
-    for e := ignore.Front(); e != nil; e = e.Next() {
-        LibdvdvLog(e.Value.(string));
-    }
     return err;
 }
 

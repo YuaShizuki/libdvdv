@@ -19,6 +19,14 @@ import "../libdvdvign"
 /* personal log function */
 var LibdvdvLog func(a ...interface{}) = func(a...interface{}){};
 
+/* state since last modified */
+type DirState struct {
+    added []string;
+    modified []string;
+    removed []string;
+}
+
+
 /*
 * Builds a database that represents overtime changes in files and directories of 
 * "record". "record" is a file path, a directory to start recording changes in.
@@ -47,26 +55,27 @@ func BuildStateDB(record string) error {
 /*
 * GetState() shows the changes since last update.
 */
-func GetState() error {
-    return nil;
+func GetState() (*DirState, error) {
+    p := new(DirState);
+    return p,nil;
 }
 
 /*
 * Update() updates the state DB. 
 */
 func UpdateStateDB(record string) error {
-    conn, err := sql.Open("sqlite3", record+"/.libdvdv/state.db");
+    db, err := sql.Open("sqlite3", record+"/.libdvdv/state.db");
     if err != nil {
         return err;
     }
-    defer conn.Close();
-    row := conn.QueryRow("select name from sqlite_master where type=table "+
+    defer db.Close();
+    row := db.QueryRow("select name from sqlite_master where type=table "+
                             "and name=State;");
     if row != nil {
         var db_name string;
         err := row.Scan(&db_name);
         if (err != nil) || (len(db_name) == 0) {
-            _, err = conn.Exec("create table State(file TEXT, modified INTEGER);");
+            _, err = db.Exec("create table State(fname TEXT, mod INTEGER);");
             if err != nil {
                 return err;
             }
@@ -81,15 +90,15 @@ func UpdateStateDB(record string) error {
     if err != nil {
         return err;
     }
-    if err = enterDirState(record, len(record)+1, conn); err != nil {
+    if err = enterDirState(record, len(record)+1, db); err != nil {
         return err;
     }
     return nil;
 }
 
-func enterDirState(dir string, base int, conn *sql.DB) error {
-    if conn == nil {
-        return errors.New("error: unopend connection");
+func enterDirState(dir string, base int, db *sql.DB) error {
+    if db == nil {
+        return errors.New("error: unopend dbection");
     }
     finfo, err := ioutil.ReadDir(dir);
     if err != nil {
@@ -101,12 +110,12 @@ func enterDirState(dir string, base int, conn *sql.DB) error {
             continue;
         }
         if finfo[i].IsDir() {
-            err := enterDirState(new_entry, base, conn);
+            err := enterDirState(new_entry, base, db);
             if err != nil {
                 return err;
             }
         } else {
-            _, err := conn.Exec("INSERT INTO State VALUES(?, ?)",
+            _, err := db.Exec("INSERT INTO State VALUES(?, ?)",
                                 new_entry[base:len(new_entry)], finfo[i].ModTime().UnixNano());
             if err != nil {
                 return err;

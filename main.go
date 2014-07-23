@@ -25,6 +25,7 @@ import "sort"
 *       libdevdev status
 *   libdevdev help
 */
+
 func main() {
    if len(os.Args) < 2 {
         fmt.Println("unknown command-linei, execute [$libdevdev help] for usage");
