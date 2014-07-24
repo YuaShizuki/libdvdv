@@ -1,5 +1,6 @@
 /*
 * Code guide line for libdvdv
+* this is psudo code a highlevel discription of libdvdv system.
 */
 
 /libdvdvign
@@ -21,13 +22,22 @@
     -> Setup( );
         #initializes state database with initial reading.
 
-    -> BuildUpdate( ) 
+    -> BuildUpdate( ):
         # this function takes the current project state
         # and builds the tar.gz file containing the update.
             
-    -> ApplysUpdate( tar.gz )
+    -> ApplysUpdate( tar.gz ):
         # applies the update patch contained inside of 
         # tar.gz file.
+
+    -> ApplyStrongPatch( tar.gz ):
+        # applies the patch to the current directory, does not 
+        # worry about collisions.
+
+    -> ApplyTempPatch(tar.gz):
+        
+    ->RemoveTempPatch();
+
 
 /libdvdvstorage
     -> Store( file ):
@@ -37,30 +47,57 @@
         #gets file from file server.
 
 
-/libdvdvserver
-    -> http post /export?surl=...&f0=...&f1=...&f2=...&fn=...&UUID0=...UUIDn=....:
-            # f0...fn are module urls stored in storage...
-            # UUID...UUIDn are uniquely genrated uuids.
-            # surl is project tar.gz url
-            sid := new sid;
-            usrid := cookie.GetUserId();
-            Sql.AddToWork(surl, sid, usrid);
-            Sql.AddToTableWorkModules((sid,f,UUID0), (sid, f1, UUID1), ....(sid, fn, UUIDn));      
-            return sid;
+/libdvdvserver:
+    # table names are specified as _blablabla_;
 
-    -> http post update /update?surl=...uuid0=...&uuid1=...&uuidn=...:
+    -> http post /export?name=..&tags0=...&tagsN=...&surl=...&f0=...&f1=...&f2=...&fn=...&UUID0=...UUIDn=...:
+        # f0...fn are module urls stored in storage...
+        # UUID...UUIDn are uniquely genrated uuids.
+        # surl is project tar.gz url
+        sid := new sid;
+        usrid := cookie.GetUserId();
+        Sql.AddTo_Work(surl, sid, usrid, name);
+        Sql.AddToTable_WorkModules((sid,f,UUID0), (sid, f1, UUID1), ....(sid, fn, UUIDn));      
+        return sid;
+
+    -> http post /update?surl=...&sid=...:
+        (_,_,id) = Sql.QueryWorkUpateLast(sid)
+        Sql.AddTo_WorkUpdate(sid, surl, id++);
+
+    -> http get /work_uuid=....:
+        (sid,f,_) := Sql.Query_WorkModules_WhereUUIDis(work_uuid);
+        (surl,_,_) := Sql.Query_Work_WhereSidIs(sid);
+        return Array(surl + Sql.QueryGetAll_WorkUpdates_WhereSidIs(sid)), f.Name(), Sql.Query_WorkUpate_Last(sid);
+
+    -> http get /last_update={UUID}:
+        (sid, _, _) := Sql.Query_WorkModules_WhereUUIDis({UUID});
+        return Sql.Query_WorkUpdate_Last(sid);
+
+    -> http get /updates_since={UUID}&prev={prev};
+        (sid, _, _) := Sql.Query_WorkModules_WhereUUIDis({UUID});
+        return Sql.QueryAll_WorkUpdates_since({prev},sid);
         
+    -> http post /solution?surl={surl}&uuid={UUID}:
+        (sid, _, _) := Sql.Query_WorkModules_WhereUUIDis({UUID});  
+        Sql.AddTo_Solutions(sid, surl);
 
-
-/libdvdvwallet
-    -> CreateWallet():
+/libdvdvwallet:
+    -> CreateWallet(encryption_key):
+            pb_key := GenPubKey();
+            prv_key := pub_key.priv_key;
+            libdvdvwallet := [pub_key, encrypt(encryption_key, prv_key)]);
+            os.WriteFile("~/.libdvdvwallet", libdvdvwallet);
 
     -> GetBalance():
         if libdvdvutil.PathExist("~/.libdvdvwallet"):
-            wallet := decrypt("~/.libdvdvwallet"); //asks for the password.
+            wallet := os.ReadFile("~/.libdvdvwallet");
             return getBalance(wallet.pubkey);
         else :
-            return -1;           
+            return -1;
+
+    -> GetPublicKey():
+            wallet := os.ReadFile("~/.libdvdvwallet");
+            return wallet.pubKey;
              
 
 main:
@@ -76,7 +113,9 @@ main:
         if libdvdvwallet.GetBalance() >= price:
             url := libdvdvstoreage.Store(libdvdvutil.tar(".")); 
             urlf := libdvdvstoreage.Store(modules); 
-            sid := libdvdvserver.PostExport('surl={url}&f0={urlf0}....&fn={urlfn}&UUID0={uuids0}...UUIDn={uuidn});
+            pass = SignUpPasswordAddUserAccount();
+            name, tags := "Enter a name for this modules and hastags"
+            sid := libdvdvserver.PostExport(tags, name, pass,'surl={url}&f0={urlf0}....&fn={urlfn}&UUID0={uuids0}...UUIDn={uuidn});
             os.WriteFile(".libdvdv/uuids.i", uuids);
             os.WriteFile(".libdvdv/sid.i", sid);
             libdvdvupdate.Setup();
@@ -86,12 +125,50 @@ main:
 
     if "libdvdv m pushupdate":
         BuildIgnoreList(parseIgnoreFile());
-        tar.gz := BuildUpdate(".");
+        tar.gz := BuildUpdate();
         url := libdvdvstorage.Store(tar.gz);
         sid := os.ReadFile(".libdvdv/sid.i");
         libdvdvserver.PostUpdate(url, sid);
     
-    if "libdvdv m wallet":
-        
+    if "libdvdv w get {UUID}":
+        all,module,last_id := libdvdvsever.GetWorkUuid({UUID});
+        dir := os.Mkdir(all[0].Name()+"-"+module);
+        os.Chdir(dir);
+        os.Chdir(libdvdvutil.Untar(libdvdvstorage.get(all[0])));
+        for range all[1...n]:
+            libdvdvupdate.ApplyStrongPatch(libdvdvstrorage.get(all[i]));
+        os.MkDir(".libdvdv");
+        libdvdvupdate.Setup();
+        os.WriteFile(".libdvdv/last_update.i", last_id);
+        os.WriteFile(".libdvdv/uuid.i", {UUID});
 
+    if "libdvdv w update":
+        uuid := os.ReadFile(".libdvdv/uuid.i");
+        last := libdvdvserver.GetLastUpdate(uuid);
+        current := os.ReadFile(".libdvdv/last_update.i");
+        if last > current:
+            updates := libdvdvserver.GetUpdatesSince(current, uuid);
+            for range updates:
+                libdvdvupdate.ApplyUpdates(updates);
+
+    if "libdvdv w submit":
+        tar.gz := libdvdvupdate.BuildUpdate();
+        url := libdvdvstorage.Store(tar.gz);
+        pass = SignUpPasswordAndUserAccount();        
+        libdvdvserver.PostSolution(pass, url, os.ReadFile(".libdvdv/uuid.i"));
+
+    if "libdvdv m try":
+
+
+    if "libdvdv m wallet":
+        if libdvdvutil.PathExist("~/.libdvdvwallet"):
+            "Your current ballance is %d", libdvdvwallet.GetBallance();
+            "Your public address is %s" libdvdvwallet.GetPublicAddress();
+            "This is a temporary holding wallet, its only use is to hold the specified amount"
+            "till a right solution arrives.";
+        else:
+            "Creating a new wallet, please refer to {url} for the puspose of this wallet"
+            "Enter a encryption key -> "
+            "Renter a encryption key-> "
+            CreateWallet(encryption_key);
 
