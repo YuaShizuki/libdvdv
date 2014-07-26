@@ -36,7 +36,7 @@
 
     -> ApplyTempPatch(tar.gz):
         
-    ->RemoveTempPatch();
+    -> RemoveTempPatch();
 
 
 /libdvdvstorage
@@ -49,19 +49,28 @@
 
 /libdvdvserver:
     # table names are specified as _blablabla_;
+    # make sures all users have confirmed their email. before any request proceed.
+
+    -> http post /UserSignUp?name={name}&email={email}:
+        uuid := genUUID();
+        Sql.Add_User({name},{addr},{email},{confirmed=false}, {uuid});
+        smtp.SendEmail({email},confirmation_link+"/?uuid");
+
+    -> http get /confirm_usr?{UUID}:
+        Sql.Update_User_WhereUUIDis({UUID}, "confirmed=true");
 
     -> http post /export?name=..&tags0=...&tagsN=...&surl=...&f0=...&f1=...&f2=...&fn=...&UUID0=...UUIDn=...:
         # f0...fn are module urls stored in storage...
         # UUID...UUIDn are uniquely genrated uuids.
         # surl is project tar.gz url
-        sid := new sid;
+        sid := GenUUID();
         usrid := cookie.GetUserId();
         Sql.AddTo_Work(surl, sid, usrid, name);
         Sql.AddToTable_WorkModules((sid,f,UUID0), (sid, f1, UUID1), ....(sid, fn, UUIDn));      
         return sid;
 
     -> http post /update?surl=...&sid=...:
-        (_,_,id) = Sql.QueryWorkUpateLast(sid)
+        (_,_,id) = Sql.Query_WorkUpate_Last(sid)
         Sql.AddTo_WorkUpdate(sid, surl, id++);
 
     -> http get /work_uuid=....:
@@ -77,9 +86,15 @@
         (sid, _, _) := Sql.Query_WorkModules_WhereUUIDis({UUID});
         return Sql.QueryAll_WorkUpdates_since({prev},sid);
         
-    -> http post /solution?surl={surl}&uuid={UUID}:
+    -> http post /solution?surl={surl}&uuid={UUID}&addr={addr}:
         (sid, _, _) := Sql.Query_WorkModules_WhereUUIDis({UUID});  
-        Sql.AddTo_Solutions(sid, surl);
+        Sql.AddTo_Solutions(sid, surl, GenUUID(), pass.User, addr, accpeted=false);
+
+    -> http get /solution?UUID={UUID}:
+        return Sql.Query_Solutions_WhereUUIDis({UUID});
+    
+    -> http post /acceptedSolution?uuid={UUID}:
+        Sql.Update_Solutions_WhereUUIDis({UUID}, "accpetd=true");
 
 /libdvdvwallet:
     -> CreateWallet(encryption_key):
@@ -155,10 +170,29 @@ main:
         tar.gz := libdvdvupdate.BuildUpdate();
         url := libdvdvstorage.Store(tar.gz);
         pass = SignUpPasswordAndUserAccount();        
-        libdvdvserver.PostSolution(pass, url, os.ReadFile(".libdvdv/uuid.i"));
+        solution_uuid := libdvdvserver.PostSolution(pass, url, os.ReadFile(".libdvdv/uuid.i"));
+        os.WriteFile(".libdvdv/posted_solution.i", solution_uuid);
 
-    if "libdvdv m try":
+    if "libdvdv w status":
+        if libdvdvutil.PathExist(".libdvdv/posted_solution.i"):
+            libdvdvserver.
 
+
+    if "libdvdv m try {UUID}":
+        (_, surl, _) := libdvdvserver.GetSolution({UUID});
+        tar.gz := libdvdvstorage.Get(surl);
+        libdvdvupdate.ApplyTempUpdate(tar.gz);
+        os.WriteFile(".libdvdv/trying_uuid.i", {UUID})
+
+    if "libdvdv m untry":
+        libdvdvupdate.UnapplyTempUpdate();
+
+    if "libdvdv m accept {UUID}":
+       if libdvdvutil.FileExist(".libdvdv/trying_uuid.i"):
+           {UUID} = os.ReadFile(".libdvdv/trying_uuid.i");
+        addr := libdvdvserver.GetSoulutionPubky({UUID});
+        libdvdvwallet.Pay(key);
+        libdvdvserver.PostAcceptedSolution({UUID});    
 
     if "libdvdv m wallet":
         if libdvdvutil.PathExist("~/.libdvdvwallet"):

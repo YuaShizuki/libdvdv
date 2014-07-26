@@ -10,7 +10,6 @@ import "bytes"
 import "encoding/hex"
 import "encoding/asn1"
 import "github.com/conformal/btcec"
-import "fmt"
 import "math/big"
 import "crypto/sha256"
 
@@ -122,7 +121,7 @@ func make_raw_transaction(output_transaction_hash string, source_index uint32,
 * bitcoinkeys.png
 */
 func Tx(private_k string, to_public_k string, amount uint64) []byte {
-    output_tx_hash := "df2b060fa2e5e9c8ed5eaf6a45c13753ec8c63282b2688322eba40cd98ea067a";
+    output_tx_hash := "81b4c832d70cb56ff957589752eb4125a4cab78a25a8fc52d6a09e5bd4404d48";
     source_index := uint32(0);
     private_key, temp_pub_key := btcec.PrivKeyFromBytes(btcec.S256(), base58CheckDecodeKey(private_k));
     public_key := append(append([]byte{4}, temp_pub_key.X.Bytes()...), temp_pub_key.Y.Bytes()...);
@@ -153,9 +152,10 @@ func get_unspent_tx(public_key string) map[uint32]string {
     return make(map[uint32]string, 2);
 }
 
-func main_tx() {
-    tx := Tx("5KdttCmkLPPLN4oDet53FBdPxp4N1DWoGCiigd3ES9Wuknhm8uT",
-                "15ArtCgi3wmpQAAfYx4riaFmo4prJA4VsK", uint64(4999990000));
-    fmt.Println(hex.EncodeToString(tx));
+func main() {
+    /*tx := Tx("5HusYj2b2x4nroApgfvaSfKYZhRbKFH41bVyPooymbC6KfgSXdD",
+                "1KKKK6N21XKo48zWKuQKXdvSsCf95ibHFa", uint64(91234));
+    fmt.Println(hex.EncodeToString(tx));*/
+    get_unspent_tx_go();
 }
 

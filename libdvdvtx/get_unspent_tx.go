@@ -22,6 +22,7 @@ func get_unspent(addr string) ([]tx_unspent, error) {
     json.Unmarshal(body, &u);
     unspent_temp, is_perfect_json := u.(map[string]interface{});
     if !is_perfect_json {
+        fmt.Println(string(body));
         return nil, errors.New("Cannot Parse JSON");
     }
     unspent_main, contains := unspent_temp["unspent_outputs"];
