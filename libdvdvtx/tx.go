@@ -126,7 +126,8 @@ func Tx(private_k string, to_public_k string, amount uint64) []byte {
     source_index := uint32(0);
     private_key, temp_pub_key := btcec.PrivKeyFromBytes(btcec.S256(), base58CheckDecodeKey(private_k));
     public_key := append(append([]byte{4}, temp_pub_key.X.Bytes()...), temp_pub_key.Y.Bytes()...);
-    fmt.Println("--->\n",hex.EncodeToString(public_key),"<------\n")
+
+    fmt.Println("--->\n",hex.EncodeToString(public_key),"\n<------\n");
     script_pub_key := make_script_pub_key(public_key);
     outputs := make([]txout, 1);
     outputs[0] = txout{amount, make_script_pub_key([]byte(base58CheckDecodeKey(to_public_k)))};
