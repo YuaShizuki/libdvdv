@@ -92,6 +92,7 @@ func allocWork() {
 }
 
 func buildIgnoreList(content []byte) []string {
+
     str := strings.Split(string(content), "\n");
     ignore_list := make([]string, len(str));
     j := 0;
